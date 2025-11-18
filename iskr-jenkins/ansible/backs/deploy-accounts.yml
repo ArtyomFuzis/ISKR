@@ -1,0 +1,36 @@
+---
+  - name: Build accounts backend
+    hosts: localhost
+    tasks: 
+    
+  - name: Deploy accounts backend
+    hosts: deploy_back_accounts
+    tasks: 
+      - name: Give access to socket for install user
+        file: 
+          path: "/var/run/docker.sock"
+          state: file 
+          owner: "{{ansible_user}}"
+        become: yes
+
+      - name: Stop accounts backend 
+        shell: "cd {{base_path}}/docker/ && docker compose -f back_accounts.yml down"
+        ignore_errors: yes
+
+      - name: Copy docker template 
+        template: 
+          src: "/workspace/templates/backs/accounts.j2"
+          dest: "{{base_path}}/docker/back_accounts.yml"
+
+      - name: Pull accounts image 
+        shell: "cd {{base_path}}/docker/ && docker compose -f back_accounts.yml build"
+      
+      - name: Start accounts backend 
+        shell: |
+          cd {{base_path}}/docker/ && \
+          AL_POSTGRES_USER={{al_pg_user}} \
+          AL_POSTGRES_PASSWORD={{al_pg_password}} \
+          AL_POSTGRES_DB={{al_pg_db}} \
+          AL_POSTGRES_PORT={{al_pg_port}} \
+          AL_POSTGRES_HOST={{al_pg_host}} \
+          docker compose -f back_accounts.yml up -d

@@ -1,0 +1,23 @@
+spring:
+  application:
+    name: AccountsBackend
+  config:
+    import: "consul:"
+  cloud:
+    consul:
+      host: localhost
+      port: 8500
+      discovery:
+          instance-id: ${spring.application.name}:${random.uuid}
+          hostname: localhost
+      config:
+        enabled: true
+        defaultContext: apps
+        format: YAML
+        watch:
+          enabled: true
+  datasource:
+    username: pguser
+    password: 1111
+server:
+  port: 8021

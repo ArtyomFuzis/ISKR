@@ -1,0 +1,8 @@
+---
+  postgresql_version : 16
+  postgresql_listen_addresses: "*"
+  liquibase_download_url: "https://github.com/liquibase/liquibase/releases/download/v{{ liquibase_version }}/liquibase-{{ liquibase_version }}.tar.gz"
+  liquibase_version: "5.0.1"
+  jdbc_pgsql_driver_link: "https://jdbc.postgresql.org/download/postgresql-42.6.0.jar"
+  jdbc_link_liquibase: "jdbc:postgresql://127.0.0.1:5432/postgres"
+  liqu_changelog: "./iskr-database/changelog-master.xml"

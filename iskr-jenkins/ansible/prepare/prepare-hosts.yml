@@ -1,0 +1,28 @@
+---
+  - name: Prepare hosts
+    hosts: deploy_worker
+    tasks:   
+      - name: Ensure that base path exists
+        file: 
+          path: "{{base_path}}"
+          state: directory 
+          owner: "{{ansible_user}}"
+        become: yes
+          
+      - name: Ensure that tmp dir exists
+        file: 
+          path: "{{base_path}}/tmp"
+          state: directory 
+      
+      - name: Ensure that docker dir exists
+        file: 
+          path: "{{base_path}}/docker"
+          state: directory
+          
+      - name: Create docker network
+        shell: "docker network create {{network_name}}"
+        register: network_create_result
+        failed_when: 
+          - network_create_result.rc != 0
+          - network_create_result.rc != 1  
+      

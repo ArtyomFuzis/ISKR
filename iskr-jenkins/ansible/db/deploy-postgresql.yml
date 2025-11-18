@@ -1,0 +1,57 @@
+---
+- name: Install postgresql as root
+  hosts: deploy_db_postgres
+  tasks: 
+    - name: Update apt package cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+      become: yes
+    
+    - name: Install postgresql
+      apt:
+        name:
+          - "postgresql-{{ postgresql_version }}"
+          - python3-psycopg2
+          - postgresql-contrib
+        state: present
+      become: yes
+    
+    - name: Configure PostgreSQL listen addresses
+      lineinfile:
+        path: /etc/postgresql/{{ postgresql_version }}/main/postgresql.conf
+        regexp: "^listen_addresses ="
+        line: "listen_addresses = '{{ postgresql_listen_addresses }}'"
+        backup: yes
+      become: yes
+
+    - name: Start postgresql
+      systemd:
+        name: postgresql
+        state: restarted
+        enabled: yes
+      become: yes
+    
+    - name: Create PostgreSQL user
+      shell: |
+        sudo -u postgres psql -c "DROP USER IF EXISTS {{ postgresql_admin_user }}; CREATE USER {{ postgresql_admin_user }} WITH PASSWORD '{{ postgresql_admin_password }}' SUPERUSER;"
+      become: yes
+    
+    - name: Configure client authentication
+      lineinfile:
+        path: /etc/postgresql/{{ postgresql_version }}/main/pg_hba.conf
+        line: "host all {{ postgresql_admin_user }} 0.0.0.0/0 md5"
+        state: present
+        backup: yes
+      become: yes
+    
+    - name: Restart postgresql
+      systemd:
+        name: postgresql
+        state: restarted
+        enabled: yes
+      become: yes
+
+
+
+    

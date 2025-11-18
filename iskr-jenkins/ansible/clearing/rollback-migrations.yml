@@ -1,0 +1,7 @@
+---
+- name: Undeploy db
+  hosts: deploy_db
+  become: yes
+  tasks:
+    - name: Rollback migrations
+      shell: "cd {{base_path}}/liquibase && liquibase rollback-count 9999 --url {{jdbc_link_liquibase}} --username={{postgresql_admin_user}} --password={{postgresql_admin_password}} --changelog-file {{liqu_changelog}}"

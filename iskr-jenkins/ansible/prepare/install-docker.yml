@@ -1,0 +1,61 @@
+---
+  - name: Install docker
+    hosts: deploy_worker
+    become: yes
+    tasks: 
+      - name: Update apt package cache
+        apt:
+          update_cache: yes
+          cache_valid_time: 3600
+
+      - name: Install required packages 
+        apt: 
+          name: 
+            - ca-certificates
+            - curl
+          state: present
+          
+      - name: Prepare certificates
+        shell: |
+          install -m 0755 -d /etc/apt/keyrings && \
+          curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc && \
+          chmod a+r /etc/apt/keyrings/docker.asc
+
+      - name: Add the Docker repository to Apt sources
+        shell: |
+          tee /etc/apt/sources.list.d/docker.sources <<EOF 
+          Types: deb 
+          URIs: https://download.docker.com/linux/ubuntu 
+          Suites: $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") 
+          Components: stable 
+          Signed-By: /etc/apt/keyrings/docker.asc 
+          EOF
+      
+      - name: Apt update
+        shell: "apt update"
+      
+      - name: Install docker packages 
+        package: 
+          name: 
+            - docker-ce
+            - docker-ce-cli
+            - containerd.io
+            - docker-buildx-plugin
+            - docker-compose-plugin
+          state: present
+      
+      - name: Start docker 
+        systemd:
+          name: docker
+          state: restarted
+          enabled: yes
+      
+      - name: Give access to socket for install user
+        file: 
+          path: "/var/run/docker.sock"
+          state: file 
+          owner: "{{ansible_user}}"
+      
+
+       
+      

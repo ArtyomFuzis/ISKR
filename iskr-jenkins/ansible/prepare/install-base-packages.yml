@@ -1,0 +1,15 @@
+---
+  - name: Install base packages
+    hosts: deploy_worker
+    become: yes
+    tasks: 
+      - name: Update apt package cache
+        apt:
+          update_cache: yes
+          cache_valid_time: 3600
+
+      - name: Install host packages 
+        apt: 
+          name: "{{ base_apt_packages }}"
+          state: present
+          

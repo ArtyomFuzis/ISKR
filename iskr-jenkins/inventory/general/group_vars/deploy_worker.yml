@@ -1,0 +1,13 @@
+---
+  base_apt_packages: 
+    - curl
+    - wget
+    - git
+    - htop
+    - vim
+    - mc
+    - net-tools
+    - python3-pip
+    - iputils-ping
+    - dnsutils
+  

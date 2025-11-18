@@ -1,0 +1,3 @@
+---
+  base_path: "/opt/autodeploy"
+  network_name: "iskr-network"

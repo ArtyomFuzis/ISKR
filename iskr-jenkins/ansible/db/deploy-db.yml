@@ -1,0 +1,19 @@
+---
+- name: Deploy db
+  hosts: deploy_db_migrations
+  become: yes
+  tasks:
+    - name: Remove old database
+      shell: "cd {{base_path}}/liquibase && rm -r iskr-database"
+      register: remove_res
+      failed_when: 
+        - remove_res.rc != 0
+        - remove_res.rc != 1
+
+    - name: Copy new database
+      copy: 
+         src: "/workspace/apps/iskr-database/"
+         dest: "{{base_path}}/liquibase/iskr-database/"
+    
+    - name: Complete migrations
+      shell: "cd {{base_path}}/liquibase && liquibase update --url {{jdbc_link_liquibase}} --username={{postgresql_admin_user}} --password={{postgresql_admin_password}} --changelog-file {{liqu_changelog}}"

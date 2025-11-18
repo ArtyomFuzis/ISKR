@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.9.xsd">
+
+    <changeSet id="version-0_0_0" author="fuzis">
+        <tagDatabase tag="v0.0.0" />
+    </changeSet>
+
+    <!-- Основные миграции -->
+    <changeSet id="accounts-schema-1" author="fuzis" runInTransaction="true">
+        <sqlFile path="v1_initial_schema_accounts.sql"
+                 relativeToChangelogFile="true"
+                 splitStatements="true"
+                 endDelimiter=";"/>
+        <rollback>
+            <sqlFile path="v1_rollback.sql" relativeToChangelogFile="true"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

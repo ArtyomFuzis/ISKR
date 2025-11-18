@@ -1,0 +1,21 @@
+services:
+  jenkins:
+    build:
+      context: ./jenkins-image
+    container_name: jenkins
+    restart: unless-stopped
+    volumes:
+      - ../:/workspace/apps:ro
+      - ./ansible:/workspace/ansible
+      - ./inventory:/workspace/inventory
+      - ./templates:/workspace/templates
+      - ./artifacts:/workspace/artifacts
+      - ./logs:/workspace/logs
+      - //var/run/docker.sock:/var/run/docker.sock
+      - ./jenkins:/var/jenkins_home
+    ports:
+      - 8005:8080
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    
+      

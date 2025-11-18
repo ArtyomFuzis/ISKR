@@ -1,0 +1,59 @@
+---
+- name: Install Liquibase
+  hosts: deploy_db_migrations
+  become: yes
+  tasks:
+    - name: Install Java JDK
+      apt:
+        name: openjdk-21-jdk
+        state: present
+
+    - name: Create installation directory
+      file:
+        path: "{{base_path}}/liquibase"
+        state: directory
+        mode: '0755'
+
+    - name: Download Liquibase
+      get_url:
+        url: "{{ liquibase_download_url }}"
+        dest: "/tmp/liquibase-{{ liquibase_version }}.tar.gz"
+        mode: '0644'
+        timeout: 60
+
+    - name: Extract Liquibase
+      unarchive:
+        src: "/tmp/liquibase-{{ liquibase_version }}.tar.gz"
+        dest: "{{base_path}}/liquibase"
+        remote_src: yes
+
+    - name: Set up Liquibase symlink
+      file:
+        src: "{{base_path}}/liquibase/liquibase"
+        dest: "/usr/local/bin/liquibase"
+        state: link
+        mode: '0755'
+
+    - name: Clean up temporary files
+      file:
+        path: "/tmp/liquibase-{{ liquibase_version }}.tar.gz"
+        state: absent
+
+    - name: Verify Liquibase installation
+      command: "liquibase --version"
+      changed_when: false
+      register: liquibase_version_check
+      failed_when: 
+        - liquibase_version_check.rc != 0
+        - "liquibase_version_check.stderr != 'Unable to find java'"
+    
+    - name: Download PostgreSQL JDBC driver
+      get_url:
+        url: "{{jdbc_pgsql_driver_link}}"
+        dest: "{{base_path}}/liquibase/lib/postgresql.jar"
+        mode: '0644'
+
+    - name: Display installation result
+      debug:
+        msg: "Liquibase {{ liquibase_version }} installed successfully"
+      when: liquibase_version_check.rc == 0

@@ -1,0 +1,29 @@
+---
+  - name: Deploy consul configuration
+    hosts: deploy_esb_configuration
+    tasks: 
+      - name: Give access to socket for install user
+        file: 
+          path: "/var/run/docker.sock"
+          state: file 
+          owner: "{{ansible_user}}"
+        become: yes
+      
+      - name: Ensure that "configuration" dir exists
+        file:
+          path: "{{base_path}}/configuration"
+          state: directory 
+      
+      - name: Copy accounts configuration
+        template: 
+           src: "/workspace/templates/esb/configuration/accounts.j2"
+           dest: "{{base_path}}/configuration/accounts.yml"
+
+      - name: Load accounts configuration 
+        shell: |
+          cd {{base_path}}/configuration && curl \
+          --request PUT \
+          --data-binary @accounts.yml \
+          http://localhost:{{consul_port}}/v1/kv/config/AccountsBackend/data
+        
+      
