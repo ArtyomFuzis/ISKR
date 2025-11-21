@@ -9,21 +9,12 @@
         <tagDatabase tag="v0.0.0" />
     </changeSet>
 
-    <changeSet id="accounts-schema-1" author="fuzis" runInTransaction="true">
-        <sqlFile path="v1_initial_schema_accounts.sql"
+    <changeSet id="test-data-1" author="fuzis" runInTransaction="true">
+        <sqlFile path="v1_push_test_data.sql"
                  relativeToChangelogFile="true"
                  splitStatements="false"/>
         <rollback>
             <sqlFile path="v1_rollback.sql" relativeToChangelogFile="true"/>
-        </rollback>
-    </changeSet>
-
-    <changeSet id="old-schema-migrate-2" author="fuzis" runInTransaction="true">
-        <sqlFile path="v2_old_schema_migrate.sql"
-                 relativeToChangelogFile="true"
-                 splitStatements="false"/>
-        <rollback>
-            <sqlFile path="v2_rollback.sql" relativeToChangelogFile="true"/>
         </rollback>
     </changeSet>
 </databaseChangeLog>

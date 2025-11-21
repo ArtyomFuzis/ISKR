@@ -6,3 +6,4 @@
   jdbc_pgsql_driver_link: "https://jdbc.postgresql.org/download/postgresql-42.6.0.jar"
   jdbc_link_liquibase: "jdbc:postgresql://127.0.0.1:5432/postgres"
   liqu_changelog: "./iskr-database/changelog-master.xml"
+  liqu_changelog_test: "./iskr-test-database/changelog-master.xml"

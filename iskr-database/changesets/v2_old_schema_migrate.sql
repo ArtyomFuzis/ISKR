@@ -1,0 +1,171 @@
+-- liquibase formatted sql
+-- changeset fuzis:1
+CREATE SCHEMA IMAGES;
+CREATE SCHEMA BOOKS;
+
+-- changeset fuzis:2
+CREATE TABLE IMAGES.IMAGE_DATAS(
+    imgd_id SERIAL PRIMARY KEY, 
+    uuid CHAR(36) NOT NULL UNIQUE,
+    uploader_id INTEGER,
+    size INTEGER NOT NULL,
+    FOREIGN KEY (uploader_id) REFERENCES ACCOUNTS.USERS(user_id)
+);
+CREATE TABLE IMAGES.IMAGE_LINKS(
+    imgl_id SERIAL PRIMARY KEY,
+    imgd_id INTEGER,
+    FOREIGN KEY (imgd_id) REFERENCES IMAGES.IMAGE_DATAS(imgd_id)
+);
+
+-- changeset fuzis:3
+CREATE TYPE ACCOUNTS.USER_STATUS AS ENUM ('banned', 'notBanned');
+CREATE TABLE ACCOUNTS.USER_PROFILES(
+    up_id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL UNIQUE,
+    user_imgl_id INTEGER UNIQUE,
+    nickname VARCHAR(255) NOT NULL,
+    email VARCHAR(512),
+    profile_description TEXT,
+    birth_date TIMESTAMP,
+    status ACCOUNTS.USER_STATUS NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES ACCOUNTS.USERS(user_id),
+    FOREIGN KEY (user_imgl_id) REFERENCES IMAGES.IMAGE_LINKS(imgl_id)
+);
+
+-- changeset fuzis:4
+CREATE TYPE BOOKS.GOALS_PERIODS AS ENUM ('1d','3d','week','month','quarter','year');
+CREATE TYPE BOOKS.READING_STATUS AS ENUM ('Planning', 'Reading', 'Delayed', 'GaveUp', 'Finished');
+CREATE TYPE BOOKS.CONFIDENTIALITY AS ENUM ('Public', 'Private');
+CREATE TYPE BOOKS.COLLECTION_TYPE AS ENUM ('Standard', 'Liked', 'Wishlist'); 
+CREATE TYPE BOOKS.CVP_STATUS AS ENUM ('Allowed', 'Disallowed');
+CREATE TYPE BOOKS.GOALS_TYPE AS ENUM ('books_read', 'pages_read'); 
+CREATE TABLE BOOKS.SUBSCRIBERS(
+    subs_id SERIAL PRIMARY KEY,
+    subs_user_id INTEGER NOT NULL, 
+    subs_user_on_id INTEGER NOT NULL,
+    FOREIGN KEY (subs_user_id) REFERENCES ACCOUNTS.USERS(user_id), 
+    FOREIGN KEY (subs_user_on_id) REFERENCES ACCOUNTS.USERS(user_id) 
+);
+CREATE TABLE BOOKS.GENRES(
+    genre_id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL UNIQUE
+);
+CREATE TABLE BOOKS.AUTHORS(
+    author_id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL, 
+    birth_date TIMESTAMP,
+    description TEXT,
+    real_name VARCHAR(255)
+);
+CREATE TABLE BOOKS.BOOKS(
+    book_id SERIAL PRIMARY KEY,
+    isbn VARCHAR(17) UNIQUE,
+    title VARCHAR(1024) NOT NULL,
+    subtitle VARCHAR(1024), 
+    description TEXT, 
+    page_cnt INTEGER NOT NULL, 
+    photo_link INTEGER UNIQUE, 
+    added_by INTEGER, 
+    FOREIGN KEY (photo_link) REFERENCES IMAGES.IMAGE_LINKS(imgl_id), 
+    FOREIGN KEY (added_by) REFERENCES ACCOUNTS.USERS(user_id),
+    UNIQUE (title, subtitle)
+);
+CREATE TABLE BOOKS.BOOKS_AUTHORS(
+    gc_book_author_id SERIAL PRIMARY KEY,
+    book_id INTEGER NOT NULL,  
+    author_id INTEGER NOT NULL,
+    FOREIGN KEY (book_id) REFERENCES BOOKS.BOOKS(book_id),
+    FOREIGN KEY (author_id) REFERENCES BOOKS.AUTHORS(author_id)
+);
+CREATE TABLE BOOKS.BOOKS_GENRES(
+    gc_book_genre_id SERIAL PRIMARY KEY,
+    book_id INTEGER NOT NULL,  
+    genre_id INTEGER NOT NULL,
+    FOREIGN KEY (book_id) REFERENCES BOOKS.BOOKS(book_id),
+    FOREIGN KEY (genre_id) REFERENCES BOOKS.GENRES(genre_id)
+);
+CREATE TABLE BOOKS.BOOK_REVIEWS(
+    rvw_id SERIAL PRIMARY KEY, 
+    user_id INTEGER NOT NULL, 
+    book_id INTEGER NOT NULL,
+    score INTEGER NOT NULL,
+    review_text TEXT, 
+    FOREIGN KEY (user_id) REFERENCES ACCOUNTS.USERS(user_id), 
+    FOREIGN KEY (book_id) REFERENCES BOOKS.BOOKS(book_id),
+    CHECK (score > 0 AND score < 10)
+);
+CREATE TABLE BOOKS.READING_GOALS(
+    pgoal_id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    period BOOKS.GOALS_PERIODS NOT NULL, 
+    start_date TIMESTAMP NOT NULL DEFAULT NOW(),
+    amount INTEGER NOT NULL, 
+    goal_type BOOKS.GOALS_TYPE NOT NULL,
+    CHECK (amount > 0), 
+    FOREIGN KEY (user_id) REFERENCES ACCOUNTS.USERS(user_id)
+);
+CREATE TABLE BOOKS.BOOK_READING_STATUS(
+    brs_id SERIAL PRIMARY KEY, 
+    user_id INTEGER NOT NULL,
+    book_id INTEGER NOT NULL,
+    reading_status BOOKS.READING_STATUS NOT NULL,
+    page_read INTEGER NOT NULL DEFAULT 0,
+    last_read_date TIMESTAMP, 
+    FOREIGN KEY (user_id) REFERENCES ACCOUNTS.USERS(user_id),
+    FOREIGN KEY (book_id) REFERENCES BOOKS.BOOKS(book_id)
+);
+CREATE TABLE BOOKS.BOOK_COLLECTIONS(
+    bcols_id SERIAL PRIMARY KEY,
+    owner_id INTEGER NOT NULL,
+    title VARCHAR(512) NOT NULL, 
+    description TEXT,
+    confidentiality BOOKS.CONFIDENTIALITY NOT NULL,
+    book_collection_type BOOKS.COLLECTION_TYPE NOT NULL, 
+    FOREIGN KEY (owner_id) REFERENCES ACCOUNTS.USERS(user_id)
+);
+CREATE TABLE BOOKS.BOOKS_BOOK_COLLECTIONS(
+    c_book_bcol_id SERIAL PRIMARY KEY,
+    book_id INTEGER NOT NULL,  
+    bcols_id INTEGER NOT NULL,
+    FOREIGN KEY (book_id) REFERENCES BOOKS.BOOKS(book_id),
+    FOREIGN KEY (bcols_id) REFERENCES BOOKS.BOOK_COLLECTIONS(bcols_id)
+);
+CREATE TABLE BOOKS.COLLECTION_VIEW_PRIVILEGES(
+    cvp_id SERIAL PRIMARY KEY,
+    bcols_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    status BOOKS.CVP_STATUS NOT NULL,
+    FOREIGN KEY (bcols_id) REFERENCES BOOKS.BOOK_COLLECTIONS(bcols_id)
+);
+CREATE TABLE BOOKS.LIKED_COLLECTIONS(
+    lc_id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    bcols_id INTEGER NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES ACCOUNTS.USERS(user_id),
+    FOREIGN KEY (bcols_id) REFERENCES BOOKS.BOOK_COLLECTIONS(bcols_id)
+);
+
+-- changeset fuzis:5
+CREATE INDEX BOOK_INDEX ON BOOKS.BOOKS(title, subtitle); 
+CREATE INDEX USER_INDEX ON ACCOUNTS.USERS(username);
+CREATE INDEX COLLECTION_INDEX ON BOOKS.BOOK_COLLECTIONS(title);
+CREATE INDEX BOOK_AUTHORS_INDEX ON BOOKS.AUTHORS(name); 
+
+CREATE OR REPLACE FUNCTION BOOKS.STATUS_UPDATE_FUNCTION()
+RETURNS TRIGGER AS $$
+DECLARE 
+    book_pages INTEGER;
+BEGIN
+    NEW.last_read_date = NOW();
+    SELECT page_cnt INTO book_pages FROM BOOKS.BOOKS WHERE book_id = NEW.book_id;
+    IF NEW.page_read = book_pages THEN 
+        NEW.reading_status = 'Finished';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER STATUS_UPDATE_TRIGGER 
+BEFORE UPDATE ON BOOKS.BOOK_READING_STATUS 
+FOR EACH ROW 
+EXECUTE FUNCTION BOOKS.STATUS_UPDATE_FUNCTION();
