@@ -30,7 +30,6 @@ public class BackendErrorProcessor implements Processor {
         exchange.getIn().setBody(errorResponse);
         exchange.getIn().setHeader(Exchange.CONTENT_TYPE, "application/json");
 
-        // Сохраняем оригинальный код ответа или устанавливаем 500
         if (statusCode == null) {
             exchange.getIn().setHeader(Exchange.HTTP_RESPONSE_CODE, 500);
         }

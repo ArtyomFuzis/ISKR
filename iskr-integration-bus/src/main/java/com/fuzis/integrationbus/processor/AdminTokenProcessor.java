@@ -3,7 +3,6 @@ package com.fuzis.integrationbus.processor;
 import com.fuzis.integrationbus.configuration.SSOConfiguration;
 import com.fuzis.integrationbus.exception.AuthenticationException;
 import com.fuzis.integrationbus.exception.ServiceFall;
-import com.fuzis.integrationbus.util.FormatEncoder;
 import com.fuzis.integrationbus.util.ProcessorUtils;
 import org.apache.camel.CamelContext;
 import org.apache.camel.Exchange;
@@ -18,6 +17,7 @@ import java.util.Map;
 
 @Component
 public class AdminTokenProcessor implements Processor {
+    private static final Logger log = LoggerFactory.getLogger(AdminTokenProcessor.class);
 
     private final SSOConfiguration ssoConfiguration;
 
@@ -37,7 +37,6 @@ public class AdminTokenProcessor implements Processor {
     public void process(Exchange exchange) throws Exception {
 
         String httpEndpoint = ssoConfiguration.getKeycloakUrl() + "/realms/" + ssoConfiguration.getAdminRealm() + "/protocol/openid-connect/token?throwExceptionOnFailure=false";
-
         Integer return_code = this.processorUtils.ssoRequest(producerTemplate,exchange,httpEndpoint, Map.of(
                 "grant_type", "password",
                 "client_id", "admin-cli",

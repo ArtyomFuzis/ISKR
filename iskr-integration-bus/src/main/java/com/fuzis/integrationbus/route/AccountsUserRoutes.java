@@ -1,10 +1,9 @@
 package com.fuzis.integrationbus.route;
 
 import com.fuzis.integrationbus.exception.AuthenticationException;
-import com.fuzis.integrationbus.processor.AuthHeaderProcessor;
-import com.fuzis.integrationbus.processor.BackendErrorProcessor;
-import com.fuzis.integrationbus.processor.EnrichProcessor;
-import com.fuzis.integrationbus.processor.JsonBodyValidationProcessor;
+import com.fuzis.integrationbus.exception.NoRequiredHeader;
+import com.fuzis.integrationbus.exception.ServiceFall;
+import com.fuzis.integrationbus.processor.*;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.builder.RouteBuilder;
@@ -18,6 +17,13 @@ import java.util.Map;
 
 @Component
 public class AccountsUserRoutes extends RouteBuilder {
+
+    private final ChangeSSOUserDataProcessor changeSSOUserDataProcessor;
+
+    @Autowired
+    public AccountsUserRoutes(ChangeSSOUserDataProcessor changeSSOUserDataProcessor) {
+        this.changeSSOUserDataProcessor = changeSSOUserDataProcessor;
+    }
 
     @Override
     public void configure() {
@@ -37,19 +43,25 @@ public class AccountsUserRoutes extends RouteBuilder {
 
         from("platform-http:/oapi/v1/accounts/user?httpMethodRestrict=PUT")
                 .routeId("accounts-user-put-route")
+                .onException(NoRequiredHeader.class)
+                    .handled(true)
+                    .to("direct:bad-request-error-handler")
+                .end()
+                .onException(AuthenticationException.class)
+                    .handled(true)
+                    .to("direct:auth-error-handler")
+                .end()
+                .onException(ServiceFall.class)
+                    .handled(true)
+                    .to("direct:service-error-handler")
+                .end()
                 .setHeader("X-Roles-Required", constant("profile-watch,profile-change"))
                 .to("direct:auth")
-                .setHeader(Exchange.HTTP_METHOD, constant("PUT"))
-                .setHeader("X-Service", constant("Accounts"))
-                .setHeader("X-Service-Request", simple("api/v1/accounts/user/${header.X-User-ID}"))
-                .to("direct:sd-call-finalize");
-
-        from("platform-http:/oapi/v1/accounts/user?httpMethodRestrict=OPTIONS")
-                .routeId("accounts-user-options-route")
-                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
-                .setHeader("Access-Control-Allow-Origin", constant("*"))
-                .setHeader("Access-Control-Allow-Methods", constant("GET, PUT, OPTIONS"))
-                .setHeader("Access-Control-Allow-Headers", constant("Content-Type, Authorization"))
-                .setBody(constant(""));
+                .process(changeSSOUserDataProcessor)
+                .end();
+//                .setHeader(Exchange.HTTP_METHOD, constant("PUT"))
+//                .setHeader("X-Service", constant("Accounts"))
+//                .setHeader("X-Service-Request", simple("api/v1/accounts/user/${header.X-User-ID}"))
+//                .to("direct:sd-call-finalize");
     }
 }

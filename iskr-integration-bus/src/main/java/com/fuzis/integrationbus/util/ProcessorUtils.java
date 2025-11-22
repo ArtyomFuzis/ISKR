@@ -50,7 +50,7 @@ public class ProcessorUtils {
 
         Integer return_code = responseExchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE, Integer.class);
         String response_json = responseExchange.getMessage().getBody(String.class);
-        Map<String, Object> response = objectMapper.readValue(response_json, new TypeReference<>() {});
+        Map<String, Object> response = response_json == null ? null : objectMapper.readValue(response_json, new TypeReference<>() {});
         exchange.getIn().setBody(response);
         return return_code;
     }
