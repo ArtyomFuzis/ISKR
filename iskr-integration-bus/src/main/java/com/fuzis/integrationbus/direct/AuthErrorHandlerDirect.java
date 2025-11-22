@@ -19,7 +19,7 @@ public class AuthErrorHandlerDirect extends RouteBuilder {
     @Override
     public void configure(){
         from("direct:auth-error-handler")
-            .log("Auth failed")
+            .routeId("auth-error-direct")
             .process(exceptionProcessor)
             .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
             .to("direct:finalize-request")

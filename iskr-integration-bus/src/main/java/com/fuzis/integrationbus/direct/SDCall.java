@@ -12,6 +12,7 @@ public class SDCall extends RouteBuilder
     @Override
     public void configure() throws Exception {
         from("direct:sd-call")
+                .routeId("sd-call-direct")
                 .onException(ServiceDiscoveryFailed.class)
                     .handled(true)
                     .to("direct:error-sd-fail-handler")

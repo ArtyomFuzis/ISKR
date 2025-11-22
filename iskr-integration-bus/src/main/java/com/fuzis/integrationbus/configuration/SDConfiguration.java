@@ -26,7 +26,7 @@ public class SDConfiguration
     @Getter
     Map<String, List<ServiceInstance>> discovery;
 
-    @Scheduled(fixedRate = 10000) // 10 секунд
+    @Scheduled(fixedRate = 10000)
     public void refreshServices() {
         List<String> services = consulDiscoveryClient.getServices();
         services.forEach(service -> {

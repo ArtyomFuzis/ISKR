@@ -19,27 +19,6 @@ import java.util.Map;
 @Component
 public class AccountsUserRoutes extends RouteBuilder {
 
-    private static final Logger log = LoggerFactory.getLogger(AccountsUserRoutes.class);
-
-    private final AuthHeaderProcessor authHeaderProcessor;
-
-    private final EnrichProcessor enrichProcessor;
-
-    private final JsonBodyValidationProcessor jsonBodyValidationProcessor;
-
-    private final BackendErrorProcessor backendErrorProcessor;
-
-    public AccountsUserRoutes(
-            @Autowired EnrichProcessor enrichProcessor,
-            @Autowired AuthHeaderProcessor authHeaderProcessor,
-            @Autowired JsonBodyValidationProcessor jsonBodyValidationProcessor,
-            @Autowired BackendErrorProcessor backendErrorProcessor) {
-        this.authHeaderProcessor = authHeaderProcessor;
-        this.enrichProcessor = enrichProcessor;
-        this.jsonBodyValidationProcessor = jsonBodyValidationProcessor;
-        this.backendErrorProcessor = backendErrorProcessor;
-    }
-
     @Override
     public void configure() {
 

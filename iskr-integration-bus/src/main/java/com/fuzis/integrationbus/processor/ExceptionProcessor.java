@@ -8,11 +8,10 @@ import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 @Component
 public class ExceptionProcessor implements Processor {
-    private static final Logger log = LoggerFactory.getLogger(ExceptionProcessor.class);
-
 
     @Override
     public void process(Exchange exchange) throws Exception {
@@ -22,6 +21,9 @@ public class ExceptionProcessor implements Processor {
         errorResponse.put("errorType", exception != null ? exception.getClass().getSimpleName() : "Unknown");
         if (exception != null && exception.getCause() != null) {
             errorResponse.put("rootCause", exception.getCause().getMessage());
+        }
+        if(exchange.getIn().getHeader("X-Include-Body") != null && exchange.getIn().getHeader("X-Include-Body", Boolean.class) == true) {
+            errorResponse.put("body", exchange.getIn().getBody());
         }
         exchange.getIn().setHeader(Exchange.CONTENT_TYPE, "application/json");
         exchange.getIn().setBody(errorResponse);

@@ -1,5 +1,6 @@
 package com.fuzis.integrationbus.processor;
 
+import com.fuzis.integrationbus.exception.NoRequiredHeader;
 import com.fuzis.integrationbus.util.JwtValidator;
 import com.fuzis.integrationbus.exception.AuthenticationException;
 import com.fuzis.integrationbus.exception.AuthorizationException;
@@ -19,9 +20,12 @@ public class AuthHeaderProcessor implements Processor {
 
     private final JwtValidator jwtValidator;
 
+    private final TokenRefreshProcessor tokenRefreshProcessor;
 
-    public AuthHeaderProcessor(@Autowired JwtValidator jwtValidator) {
+    @Autowired
+    public AuthHeaderProcessor(JwtValidator jwtValidator , TokenRefreshProcessor tokenRefreshProcessor) {
         this.jwtValidator = jwtValidator;
+        this.tokenRefreshProcessor = tokenRefreshProcessor;
     }
 
     @Override
@@ -29,12 +33,22 @@ public class AuthHeaderProcessor implements Processor {
         String authHeader = exchange.getIn().getHeader("Authorization", String.class);
 
         if (authHeader == null || authHeader.isEmpty()) {
-            throw new AuthenticationException("Missing or empty authorization header");
+            throw new NoRequiredHeader("Missing or empty authorization header");
         }
-
-        UserInfo userInfo = jwtValidator.extractUserInfo(authHeader);
-
-        exchange.getIn().setHeader("X-Session-ID", userInfo.getSubject());
+        UserInfo userInfo = null;
+        try {
+            userInfo = jwtValidator.extractUserInfo(authHeader);
+        }
+        catch (AuthenticationException e) {
+            if(e.getCause().getMessage().contains("Jwt expired at")){
+                tokenRefreshProcessor.process(exchange);
+            }
+            else throw e;
+        }
+        if (userInfo == null) {
+            userInfo = jwtValidator.extractUserInfo(exchange.getIn().getHeader("Authorization", String.class));
+        }
+        exchange.getIn().setHeader("X-User-SSO-ID", userInfo.getSubject());
         exchange.getIn().setHeader("X-User-ID", userInfo.getUserId());
         exchange.getIn().setHeader("X-Login", userInfo.getLogin());
         exchange.getIn().setHeader("X-Email", userInfo.getEmail());

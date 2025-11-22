@@ -25,9 +25,21 @@ public class SSOConfiguration {
     @Value("${keycloak.service}")
     private String service;
 
+    @Value("${keycloak.admin_user}")
+    private String adminUser;
+
+    @Value("${keycloak.admin_password}")
+    private String adminPassword;
+
+    @Value("${keycloak.admin_realm}")
+    private String adminRealm;
+
+    @Value("${keycloak.secret}")
+    private String secret;
+
     private JwtDecoder jwtDecoder;
 
-    @Scheduled(fixedRate = 10000) // 10 секунд
+    @Scheduled(fixedRate = 10000)
     public void refreshDecoder() {
         String jwkSetUri = this.getKeycloakUrl() + "/realms/" + this.getRealm() + "/protocol/openid-connect/certs";
         this.jwtDecoder = NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();

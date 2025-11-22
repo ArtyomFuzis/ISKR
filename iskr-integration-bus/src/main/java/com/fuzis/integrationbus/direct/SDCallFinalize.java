@@ -21,6 +21,7 @@ public class SDCallFinalize extends RouteBuilder {
     @Override
     public void configure() throws Exception {
         from("direct:sd-call-finalize")
+                .routeId("sd-call-finalize-direct")
                 .to("direct:sd-call")
                 .unmarshal().json(JsonLibrary.Jackson, Map.class)
                 .filter(header(Exchange.HTTP_RESPONSE_CODE).isEqualTo(200))
