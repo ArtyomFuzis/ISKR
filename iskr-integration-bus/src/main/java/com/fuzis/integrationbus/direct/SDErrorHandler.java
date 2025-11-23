@@ -7,23 +7,21 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
-public class AuthErrorHandlerDirect extends RouteBuilder {
-
-
+public class SDErrorHandler extends RouteBuilder {
     private final ExceptionProcessor exceptionProcessor;
 
-    public AuthErrorHandlerDirect(@Autowired ExceptionProcessor exceptionProcessor) {
+    @Autowired
+    public SDErrorHandler(@Autowired ExceptionProcessor exceptionProcessor) {
         this.exceptionProcessor = exceptionProcessor;
     }
 
     @Override
     public void configure(){
-        from("direct:auth-error-handler")
-            .routeId("auth-error-direct")
-            .setHeader("X-Include-Body", constant(true))
-            .process(exceptionProcessor)
-            .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
-            .to("direct:finalize-request")
-            .end();
+        from("direct:error-sd-fail-handler")
+                .routeId("sd-error-direct")
+                .process(exceptionProcessor)
+                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(503))
+                .to("direct:finalize-request")
+                .end();
     }
 }

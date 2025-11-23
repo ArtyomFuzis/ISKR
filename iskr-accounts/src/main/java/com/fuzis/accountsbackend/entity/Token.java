@@ -19,13 +19,22 @@ public class Token {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer ct_id;
 
-    private String token_key;
+    @Column(name = "token_key")
+    private String tokenKey;
 
     private ZonedDateTime till_date;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "token_type")
-    private TokenType token_type;
+    private TokenType tokenType;
 
-    private String token_body;
+    @Column(name = "token-body")
+    private String tokenBody;
+
+    public Token(String tokenKey, ZonedDateTime till_date, TokenType tokenType, String tokenBody) {
+        this.tokenKey = tokenKey;
+        this.till_date = till_date;
+        this.tokenType = tokenType;
+        this.tokenBody = tokenBody;
+    }
 }

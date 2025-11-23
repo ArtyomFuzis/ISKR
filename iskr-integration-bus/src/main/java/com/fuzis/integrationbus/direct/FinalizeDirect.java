@@ -3,6 +3,7 @@ package com.fuzis.integrationbus.direct;
 import com.fuzis.integrationbus.processor.EnrichProcessor;
 import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
+import org.apache.camel.converter.stream.ReaderCache;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import org.springframework.stereotype.Component;
 
@@ -39,7 +40,20 @@ public class FinalizeDirect extends RouteBuilder {
                         .removeHeader("username")
                         .removeHeader("password")
                         .removeHeader("Cookie")
+                        .removeHeader("X-Service-Url")
                 .end()
+                .process(exchange -> {
+                    // Получаем текущее тело сообщения (которое содержит data с ReaderCache)
+                    Map<String, Object> body = exchange.getIn().getBody(Map.class);
+                    Map<String, Object> data = (Map<String, Object>) body.get("data");
+                    if (data.containsKey("body") && data.get("body") instanceof ReaderCache) {
+                        ReaderCache readerCache = (ReaderCache) data.get("body");
+                        String content = exchange.getContext().getTypeConverter()
+                                .convertTo(String.class, exchange, readerCache);
+                        data.put("body", content);
+                    }
+
+                })
                 .marshal().json()
                 .end();
     }

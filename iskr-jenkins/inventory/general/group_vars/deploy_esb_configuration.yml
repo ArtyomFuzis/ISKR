@@ -14,3 +14,8 @@
   sso_service: "integration-bus"
   log_level: "INFO"
   keycloak_container: "{{ hostvars[groups['deploy_esb_keycloak'][0]].keycloak_container_name }}"
+  rabbitmq_host: "localhost"
+  rabbitmq_port: "{{ hostvars[groups['deploy_esb_rabbit'][0]].rabbit_port }}"
+  rabbitmq_username: "{{rabbit_admin_user}}"
+  rabbitmq_password: "{{rabbit_admin_password}}"
+  rabbit_messaging_exchange: "iskr.out_msg"

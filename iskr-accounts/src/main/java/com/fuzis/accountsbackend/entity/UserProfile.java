@@ -1,0 +1,38 @@
+package com.fuzis.accountsbackend.entity;
+
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+import java.time.ZonedDateTime;
+
+@Entity
+@Table(name="user_profiles")
+@AllArgsConstructor
+@NoArgsConstructor
+@Getter
+@Setter
+public class UserProfile {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer up_id;
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private User user;
+
+    private Integer user_imgl_id;
+
+    private String nickname;
+
+    private String email;
+
+    private String profile_description;
+
+    private ZonedDateTime birth_date;
+
+    private String status;
+}

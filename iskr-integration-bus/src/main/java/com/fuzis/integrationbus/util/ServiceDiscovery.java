@@ -2,6 +2,8 @@ package com.fuzis.integrationbus.util;
 
 import com.fuzis.integrationbus.configuration.SDConfiguration;
 import com.fuzis.integrationbus.exception.ServiceDiscoveryFailed;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.client.ServiceInstance;
 import org.springframework.cloud.client.discovery.DiscoveryClient;
@@ -14,6 +16,7 @@ import java.util.Map;
 @Component
 public class ServiceDiscovery
 {
+    private final Logger log = LoggerFactory.getLogger(this.getClass());
     private final SDConfiguration sdConfiguration;
 
     public ServiceDiscovery(@Autowired SDConfiguration sdConfiguration){
@@ -36,6 +39,7 @@ public class ServiceDiscovery
         if (list != null && !list.isEmpty()) {
             return list.get(getNextCounterVal(service)%list.size()).getUri().toString();
         }
+        log.error("No service instance found for service {}",service);
         throw new ServiceDiscoveryFailed("No service instances found, service: " + service);
     }
 

@@ -12,6 +12,8 @@ import org.apache.camel.CamelContext;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.apache.camel.ProducerTemplate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -19,6 +21,8 @@ import java.util.Map;
 
 @Component
 public class LoginProcessor implements Processor {
+
+    private final Logger log = LoggerFactory.getLogger(this.getClass());
 
     private final SSOConfiguration ssoConfiguration;
 
@@ -58,8 +62,12 @@ public class LoginProcessor implements Processor {
         ),null, ProcessorUtils.SSORequestBodyType.URLENCODED);
         Map<String, Object> response =  exchange.getIn().getBody(Map.class);
         if(return_code != 200){
-            if(return_code == 401 && response.containsKey("error") && response.get("error") == "invalid_grant" ){
+            if(return_code == 401 && response.containsKey("error") && response.get("error").equals("invalid_grant")){
                 throw new AuthenticationException("Invalid credentials");
+            }
+            if(return_code == 400 && response.containsKey("error") && response.get("error").equals("invalid_grant")){
+                log.warn("Return code: {}, error: {}", return_code,  response.get("error"));
+                throw new AuthenticationException("Account is not fully set-up");
             }
            throw new ServiceFall("Unable to get token");
         }

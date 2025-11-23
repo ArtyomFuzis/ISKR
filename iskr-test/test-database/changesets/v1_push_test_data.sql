@@ -7,23 +7,23 @@ INSERT INTO ACCOUNTS.USERS (user_id, username, registered_date) VALUES
 (4, 'anonymous', '2023-04-05 16:20:00'),
 (5, 'booklover', '2023-05-12 11:00:00');
 
-INSERT INTO ACCOUNTS.TOKEN_TYPES (tt_id, tt_name) VALUES 
-(1, 'access_token'),
-(2, 'refresh_token'),
-(3, 'password_reset'),
-(4, 'email_verification'),
-(5, 'api_key');
+-- INSERT INTO ACCOUNTS.TOKEN_TYPES (tt_id, tt_name) VALUES 
+-- (1, 'access_token'),
+-- (2, 'refresh_token'),
+-- (3, 'password_reset'),
+-- (4, 'email_verification'),
+-- (5, 'api_key');
 
-INSERT INTO ACCOUNTS.TOKENS (ct_id, token_key, till_date, token_type, token_body) VALUES 
-(1, '79asd678f6578df86d86af8da', '2024-01-15 10:30:00', 1, ''),
-(2, '7s9d78a9798r983h9r3hc988c', '2024-01-15 10:30:00', 2, ''),
-(3, 'f88ds90f89y79dfdt798f9fd9', '2023-06-15 10:30:00', 3, ''),
-(4, 's79d79as7987d98as987d980a', '2023-07-20 14:45:00', 4, ''),
-(5, 'a768s5d887s6as9s7sa97as99', '2025-05-12 11:00:00', 5, ''),
-(6, '76sad67a78asdd6as87d9d6s8', '2023-06-15 10:30:00', 3, ''),
-(7, 'huouuou23oo32h323huh2ohou', '2023-06-15 10:30:00', 3, ''),
-(8, '323uoyhuoi2h3oiuoho2i2ih3', '2023-06-15 10:30:00', 3, ''),
-(9, '5oi3h4huhuiigiuiuuohhoohh', '2023-06-15 10:30:00', 3, '');
+-- INSERT INTO ACCOUNTS.TOKENS (ct_id, token_key, till_date, token_type, token_body) VALUES 
+-- (1, '79asd678f6578df86d86af8da', '2024-01-15 10:30:00', 1, ''),
+-- (2, '7s9d78a9798r983h9r3hc988c', '2024-01-15 10:30:00', 2, ''),
+-- (3, 'f88ds90f89y79dfdt798f9fd9', '2023-06-15 10:30:00', 3, ''),
+-- (4, 's79d79as7987d98as987d980a', '2023-07-20 14:45:00', 4, ''),
+-- (5, 'a768s5d887s6as9s7sa97as99', '2025-05-12 11:00:00', 5, ''),
+-- (6, '76sad67a78asdd6as87d9d6s8', '2023-06-15 10:30:00', 3, ''),
+-- (7, 'huouuou23oo32h323huh2ohou', '2023-06-15 10:30:00', 3, ''),
+-- (8, '323uoyhuoi2h3oiuoho2i2ih3', '2023-06-15 10:30:00', 3, ''),
+-- (9, '5oi3h4huhuiigiuiuuohhoohh', '2023-06-15 10:30:00', 3, '');
 
 INSERT INTO ACCOUNTS.RESET_PASSWORD_REQUESTS (rpr_id, user_id, request_date, token_id) VALUES 
 (1, 2, '2023-05-20 10:30:00', 3),

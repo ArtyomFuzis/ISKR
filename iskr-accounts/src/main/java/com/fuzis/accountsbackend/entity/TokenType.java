@@ -17,14 +17,16 @@ import java.util.List;
 public class TokenType {
     @Id
     @GeneratedValue(strategy= GenerationType.IDENTITY)
-    private Integer tt_id;
+    @Column(name="tt_id")
+    private Integer ttId;
 
-    private String tt_name;
+    @Column(name="tt_name")
+    private String ttName;
 
-    public TokenType(String tt_name) {
-        this.tt_name = tt_name;
+    public TokenType(String ttName) {
+        this.ttName = ttName;
     }
 
-    @OneToMany(mappedBy = "token_type")
+    @OneToMany(mappedBy = "tokenType")
     private List<Token> tokens;
 }

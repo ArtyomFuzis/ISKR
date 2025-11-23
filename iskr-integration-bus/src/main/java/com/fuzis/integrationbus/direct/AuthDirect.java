@@ -2,6 +2,7 @@ package com.fuzis.integrationbus.direct;
 
 import com.fuzis.integrationbus.exception.AuthenticationException;
 import com.fuzis.integrationbus.exception.AuthorizationException;
+import com.fuzis.integrationbus.exception.ServiceFall;
 import com.fuzis.integrationbus.processor.AuthHeaderProcessor;
 import com.fuzis.integrationbus.processor.ParseCookieProcessor;
 import org.apache.camel.builder.RouteBuilder;
@@ -32,6 +33,10 @@ public class AuthDirect extends RouteBuilder {
             .onException(AuthorizationException.class)
                 .handled(true)
                 .to("direct:auth-error-handler")
+            .end()
+            .onException(ServiceFall.class)
+                .handled(true)
+                .to("direct:service-error-handler")
             .end()
             .process(parseCookieProcessor)
             .process(authHeaderProcessor)

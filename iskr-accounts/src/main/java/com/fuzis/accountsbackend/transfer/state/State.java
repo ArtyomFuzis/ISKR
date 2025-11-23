@@ -6,5 +6,6 @@ public enum State
     Fail_BadData,
     Fail,
     Fail_NotFound,
-    Fail_Conflict
+    Fail_Conflict,
+    Fail_Not_Implemented
 }

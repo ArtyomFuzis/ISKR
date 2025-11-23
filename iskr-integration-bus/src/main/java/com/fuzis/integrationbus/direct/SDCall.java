@@ -1,7 +1,7 @@
 package com.fuzis.integrationbus.direct;
 
-import com.fuzis.integrationbus.exception.AuthenticationException;
 import com.fuzis.integrationbus.exception.ServiceDiscoveryFailed;
+import com.fuzis.integrationbus.util.ServiceDiscovery;
 import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
 import org.springframework.stereotype.Component;
@@ -9,6 +9,13 @@ import org.springframework.stereotype.Component;
 @Component
 public class SDCall extends RouteBuilder
 {
+    private final ServiceDiscovery serviceDiscovery;
+
+    public SDCall(ServiceDiscovery serviceDiscovery)
+    {
+        this.serviceDiscovery = serviceDiscovery;
+    }
+
     @Override
     public void configure() throws Exception {
         from("direct:sd-call")
@@ -22,7 +29,8 @@ public class SDCall extends RouteBuilder
                 .removeHeader(Exchange.HTTP_URL)
                 .choice()
                     .when(header("X-Service").isEqualTo("Accounts"))
-                    .toD("${bean:serviceDiscovery?method=getAccountsServiceUrl}/${header.X-Service-Request}?bridgeEndpoint=true&throwExceptionOnFailure=false")
+                    .setHeader("X-Service-Url", method(serviceDiscovery, "getAccountsServiceUrl"))
+                    .toD("${header.X-Service-Url}/${header.X-Service-Request}?bridgeEndpoint=true&throwExceptionOnFailure=false")
                 .end();
     }
 }

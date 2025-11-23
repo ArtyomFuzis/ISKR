@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.ZonedDateTime;
+import java.util.List;
 
 @Entity
 @Table(name="users")
@@ -23,6 +24,9 @@ public class User
     private String username;
 
     private ZonedDateTime registered_date;
+
+    @OneToOne(mappedBy = "user")
+    private UserProfile profile;
 
     public User(String username,  ZonedDateTime registered_date){
         this.username = username;

@@ -7,6 +7,12 @@ spring:
     properties:
       hibernate:
         dialect: {{jdbc_dialect}}
+  rabbitmq: 
+    host: {{rabbitmq_host}}
+    port: {{rabbitmq_port}}
+    username: {{rabbitmq_username}}
+    password: {{rabbitmq_password}}
+
 management:
   endpoints:
     web:
@@ -21,3 +27,6 @@ management:
 logging:
   level:
     root: {{log_level}}
+
+rabbitmq:
+  messaging_exchange: {{rabbit_messaging_exchange}}

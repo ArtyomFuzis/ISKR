@@ -21,3 +21,5 @@ spring:
     password: ${PG_PASSWORD}
 server:
   port: ${PORT}
+token:
+  base_expire: 3600

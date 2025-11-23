@@ -53,6 +53,9 @@ public class TokenRefreshProcessor implements Processor
         Map<String, Object> response =  exchange.getIn().getBody(Map.class);
 
         if(return_code != 200){
+            if(return_code == 400 && response.containsKey("error") && response.get("error").equals("invalid_grant")){
+                throw new AuthenticationException("Token is expired");
+            }
             throw new ServiceFall("Unable to refresh token");
         }
         exchange.getIn().setHeader("Authorization", response.get("access_token"));
