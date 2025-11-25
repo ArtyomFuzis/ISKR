@@ -4,6 +4,7 @@ import com.fuzis.accountsbackend.entity.Token;
 import com.fuzis.accountsbackend.service.TokenService;
 import com.fuzis.accountsbackend.transfer.ChangeDTO;
 import com.fuzis.accountsbackend.util.HttpUtil;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -28,7 +29,7 @@ public class TokenController {
     }
 
     @PostMapping
-    public ResponseEntity<ChangeDTO<Token>> createToken(@RequestParam Integer userId, @RequestParam @NotBlank String type) {
+    public ResponseEntity<ChangeDTO<Token>> createToken(@RequestParam @Min(0) Integer userId, @RequestParam @NotBlank String type) {
         return httpUtil.handleServiceResponse(tokenService.createToken(userId, type));
     }
 }

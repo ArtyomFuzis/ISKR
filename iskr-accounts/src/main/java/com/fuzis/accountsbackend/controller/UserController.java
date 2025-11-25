@@ -13,6 +13,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.ZonedDateTime;
+
 @RestController
 @RequestMapping("/api/v1/accounts/user")
 public class UserController {
@@ -33,33 +35,19 @@ public class UserController {
         return httpUtil.handleServiceResponse(userService.getUserData(id));
     }
 
-    @GetMapping
-    public ResponseEntity<SelectDTO<User>> getUserData(@RequestParam @NotBlank String username) {
-        return httpUtil.handleServiceResponse(userService.getUserData(username));
-    }
-
-    @PostMapping
-    public ResponseEntity<ChangeDTO<Integer>> createUser(@RequestParam @NotBlank String username){
-        return httpUtil.handleServiceResponse(userService.createUser(username));
-    }
-
-    @DeleteMapping
-    public ResponseEntity<ChangeDTO<Integer>> deleteUser(@RequestParam @NotBlank String username){
-        return httpUtil.handleServiceResponse(userService.deleteUser(username));
-    }
-
     @DeleteMapping("/{id}")
     public ResponseEntity<ChangeDTO<Integer>> deleteUser(@PathVariable @Min(0) Integer id){
         return httpUtil.handleServiceResponse(userService.deleteUser(id));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ChangeDTO<Integer>> changeUsername(@PathVariable @Min(0) Integer id,  @RequestParam @NotBlank String new_username){
-        return httpUtil.handleServiceResponse(userService.changeUsername(id, new_username));
-    }
-
-    @PutMapping
-    public ResponseEntity<ChangeDTO<Integer>> changeUsername(@RequestParam @NotBlank String username,  @RequestParam @NotBlank String new_username){
-        return httpUtil.handleServiceResponse(userService.changeUsername(username, new_username));
+    public ResponseEntity<ChangeDTO<Integer>> changePersonalData(@PathVariable @Min(0) Integer id,
+                                                                 @RequestParam(required = false) String username,
+                                                                 @RequestParam(required = false) String nickname,
+                                                                 @RequestParam(required = false) String birth_date,
+                                                                 @RequestParam(required = false) String profile_description,
+                                                                 @RequestParam(required = false) String email
+    ){
+        return httpUtil.handleServiceResponse(userService.changePersonalData(id, username));
     }
 }

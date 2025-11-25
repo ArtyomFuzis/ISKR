@@ -10,7 +10,7 @@ INSERT INTO ACCOUNTS.USERS (user_id, username, registered_date) VALUES
 INSERT INTO ACCOUNTS.TOKEN_TYPES (tt_id, tt_name) VALUES 
 (1, 'general_acceptance_token'),
 (2, 'verify_email_token'),
-(3, 'reset_password_token'),
+(3, 'reset_password_token');
 
 -- INSERT INTO ACCOUNTS.TOKENS (ct_id, token_key, till_date, token_type, token_body) VALUES 
 -- (1, '79asd678f6578df86d86af8da', '2024-01-15 10:30:00', 1, ''),

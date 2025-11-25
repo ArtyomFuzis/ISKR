@@ -4,6 +4,7 @@ import com.fuzis.integrationbus.exception.ServiceDiscoveryFailed;
 import com.fuzis.integrationbus.util.ServiceDiscovery;
 import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
+import org.apache.camel.model.dataformat.JsonLibrary;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -30,7 +31,10 @@ public class SDCall extends RouteBuilder
                 .choice()
                     .when(header("X-Service").isEqualTo("Accounts"))
                     .setHeader("X-Service-Url", method(serviceDiscovery, "getAccountsServiceUrl"))
-                    .toD("${header.X-Service-Url}/${header.X-Service-Request}?bridgeEndpoint=true&throwExceptionOnFailure=false")
+                    .when(header("X-Service").isEqualTo("Integration"))
+                    .setHeader("X-Service-Url", method(serviceDiscovery, "getIntegrationUrl"))
+                .end()
+                .toD("${header.X-Service-Url}/${header.X-Service-Request}?bridgeEndpoint=true&throwExceptionOnFailure=false")
                 .end();
     }
 }

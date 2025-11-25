@@ -27,6 +27,7 @@ CREATE TABLE ACCOUNTS.USER_PROFILES(
     email VARCHAR(512),
     profile_description TEXT,
     birth_date TIMESTAMP,
+    email_verified BOOLEAN NOT NULL DEFAULT false,
     status ACCOUNTS.USER_STATUS NOT NULL,
     FOREIGN KEY (user_id) REFERENCES ACCOUNTS.USERS(user_id),
     FOREIGN KEY (user_imgl_id) REFERENCES IMAGES.IMAGE_LINKS(imgl_id)

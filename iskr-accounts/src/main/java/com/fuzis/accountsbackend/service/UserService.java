@@ -21,41 +21,15 @@ public class UserService
         this.userRepository = userRepository;
     }
 
-    private SelectDTO<User> passUserData(Optional<User> user){
-        return user
-        .map(value -> new SelectDTO<>(State.OK, value, ""))
-        .orElseGet(() -> new SelectDTO<>(State.Fail_NotFound, null, "User not found"));
-    }
-
     public SelectDTO<User> getUserData(Integer userId){
         try {
             Optional<User> user = userRepository.findById(userId);
-            return passUserData(user);
+            return user
+                    .map(value -> new SelectDTO<>(State.OK, value, ""))
+                    .orElseGet(() -> new SelectDTO<>(State.Fail_NotFound, null, "User not found"));
         }
         catch (Exception e){
             return new SelectDTO<>(State.Fail, null, "Unexpected error: " + e.getMessage());
-        }
-    }
-
-    public SelectDTO<User> getUserData(String username){
-        try {
-            Optional<User> user = userRepository.findUserByUsername(username);
-            return passUserData(user);
-        }
-        catch (Exception e){
-            return new SelectDTO<>(State.Fail, null, "Unexpected error: " + e.getMessage());
-        }
-    }
-
-    public ChangeDTO<Integer> createUser(String username){
-        try {
-            Optional<User> user_check = userRepository.findUserByUsername(username);
-            if(user_check.isPresent())return new ChangeDTO<>(State.Fail_Conflict, "Username is already taken", null);
-            User user = userRepository.save(new User(username));
-            return new ChangeDTO<>(State.OK, "User created successfully", user.getUser_id());
-        }
-        catch (Exception e){
-            return new ChangeDTO<>(State.Fail, "Unexpected error: " + e.getMessage(), null);
         }
     }
 
@@ -71,37 +45,11 @@ public class UserService
         }
     }
 
-    public ChangeDTO<Integer> deleteUser(String username){
-        try {
-            Optional<User> user = userRepository.findUserByUsername(username);
-            if(user.isEmpty())return new ChangeDTO<>(State.Fail_NotFound, "No user found", null);
-            userRepository.deleteUserByUsername(username);
-            return new ChangeDTO<>(State.OK, "User deleted successfully", null);
-        }
-        catch (Exception e){
-            return new ChangeDTO<>(State.Fail, "Unexpected error: " + e.getMessage(), null);
-        }
-    }
-
-    public ChangeDTO<Integer> changeUsername(Integer userId, String new_username){
+    public ChangeDTO<Integer> changePersonalData(Integer userId, String new_username){
         try {
             Optional<User> user = userRepository.findUserByUsername(new_username);
             if (user.isPresent()) return new ChangeDTO<>(State.Fail_Conflict, "Username already taken", null);
             int res = userRepository.updateUsername(userId, new_username);
-            if(res == 0) return new ChangeDTO<>(State.Fail_NotFound, "User not found", null);
-            if(res != 1) return new ChangeDTO<>(State.Fail, "Unexpected error", null);
-            return new ChangeDTO<>(State.OK, "Username changed successfully", null);
-        }
-        catch (Exception e){
-            return new ChangeDTO<>(State.Fail, "Unexpected error: " + e.getMessage(), null);
-        }
-    }
-
-    public ChangeDTO<Integer> changeUsername(String old_username, String new_username){
-        try {
-            Optional<User> user = userRepository.findUserByUsername(new_username);
-            if (user.isPresent()) return new ChangeDTO<>(State.Fail_Conflict, "Username already taken", null);
-            int res = userRepository.updateUsernameByOldUsername(old_username, new_username);
             if(res == 0) return new ChangeDTO<>(State.Fail_NotFound, "User not found", null);
             if(res != 1) return new ChangeDTO<>(State.Fail, "Unexpected error", null);
             return new ChangeDTO<>(State.OK, "Username changed successfully", null);

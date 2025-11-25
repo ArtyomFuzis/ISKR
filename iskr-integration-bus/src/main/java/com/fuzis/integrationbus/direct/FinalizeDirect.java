@@ -41,12 +41,12 @@ public class FinalizeDirect extends RouteBuilder {
                         .removeHeader("password")
                         .removeHeader("Cookie")
                         .removeHeader("X-Service-Url")
+                        .removeHeader("X-No-Meta")
                 .end()
                 .process(exchange -> {
-                    // Получаем текущее тело сообщения (которое содержит data с ReaderCache)
                     Map<String, Object> body = exchange.getIn().getBody(Map.class);
                     Map<String, Object> data = (Map<String, Object>) body.get("data");
-                    if (data.containsKey("body") && data.get("body") instanceof ReaderCache) {
+                    if (data != null && data.containsKey("body") && data.get("body") instanceof ReaderCache) {
                         ReaderCache readerCache = (ReaderCache) data.get("body");
                         String content = exchange.getContext().getTypeConverter()
                                 .convertTo(String.class, exchange, readerCache);

@@ -1,5 +1,6 @@
 package com.fuzis.integrationbus.processor;
 
+import com.fuzis.integrationbus.exception.AuthenticationException;
 import com.fuzis.integrationbus.util.FormatEncoder;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
@@ -20,7 +21,9 @@ public class ParseCookieProcessor implements Processor
 
     @Override
     public void process(Exchange exchange) throws Exception {
-        Map<String,String> cookies = formatEncoder.parseCookie(exchange.getIn().getHeader("Cookie",  String.class));
+        String cookies_string = exchange.getIn().getHeader("Cookie",  String.class);
+        if(cookies_string == null) throw new AuthenticationException("Not logged in");
+        Map<String,String> cookies = formatEncoder.parseCookie(cookies_string);
         for (var el :  cookies.entrySet()){
             exchange.getIn().setHeader(el.getKey(), el.getValue());
         }

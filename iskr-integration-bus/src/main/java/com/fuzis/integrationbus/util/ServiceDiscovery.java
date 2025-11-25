@@ -47,4 +47,8 @@ public class ServiceDiscovery
         return getServiceUrl("AccountsBackend");
     }
 
+    public String getIntegrationUrl() throws ServiceDiscoveryFailed{
+        return getServiceUrl("IntegrationBus");
+    }
+
 }

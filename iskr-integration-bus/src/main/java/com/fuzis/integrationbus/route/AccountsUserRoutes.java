@@ -41,27 +41,48 @@ public class AccountsUserRoutes extends RouteBuilder {
                 .setHeader("X-Service-Request", simple("api/v1/accounts/user/${header.X-User-ID}"))
                 .to("direct:sd-call-finalize");
 
-        from("platform-http:/oapi/v1/accounts/user?httpMethodRestrict=PUT")
-                .routeId("accounts-user-put-route")
-                .onException(NoRequiredHeader.class)
-                    .handled(true)
-                    .to("direct:bad-request-error-handler")
-                .end()
-                .onException(AuthenticationException.class)
-                    .handled(true)
-                    .to("direct:auth-error-handler")
-                .end()
-                .onException(ServiceFall.class)
-                    .handled(true)
-                    .to("direct:service-error-handler")
-                .end()
-                .setHeader("X-Roles-Required", constant("profile-watch,profile-change"))
-                .to("direct:auth")
-                .process(changeSSOUserDataProcessor)
-                .end();
+//        from("platform-http:/oapi/v1/accounts/user?httpMethodRestrict=PUT")
+//                .routeId("accounts-user-put-route")
+//                .onException(NoRequiredHeader.class)
+//                    .handled(true)
+//                    .to("direct:bad-request-error-handler")
+//                .end()
+//                .onException(AuthenticationException.class)
+//                    .handled(true)
+//                    .to("direct:auth-error-handler")
+//                .end()
+//                .onException(ServiceFall.class)
+//                    .handled(true)
+//                    .to("direct:service-error-handler")
+//                .end()
+//                .setHeader("X-Roles-Required", constant("profile-watch,profile-change"))
+//                .to("direct:auth")
+//                .process(changeSSOUserDataProcessor)
+//                .end();
 //                .setHeader(Exchange.HTTP_METHOD, constant("PUT"))
 //                .setHeader("X-Service", constant("Accounts"))
 //                .setHeader("X-Service-Request", simple("api/v1/accounts/user/${header.X-User-ID}"))
 //                .to("direct:sd-call-finalize");
+
+        from("platform-http:/oapi/v1/accounts/verify-email?httpMethodRestrict=POST")
+                .routeId("accounts-verify-email-route")
+                .setHeader("X-Roles-Required", constant("profile-watch"))
+                .to("direct:auth")
+                .setHeader(Exchange.HTTP_METHOD, constant("POST"))
+                .setHeader("X-Service", constant("Integration"))
+                .setHeader("X-Service-Request", simple("oapi-inner/v1/accounts/verify-email"))
+                .setBody(constant(""))
+                .to("direct:sd-call-finalize");
+
+        from("platform-http:/oapi-inner/v1/accounts/verify-email?httpMethodRestrict=POST")
+                .routeId("accounts-inner-verify-email-route")
+                .setHeader(Exchange.HTTP_METHOD, constant("POST"))
+                .setHeader("X-Service", constant("Accounts"))
+                .setHeader("X-No-Meta", constant(true))
+                .setHeader("X-Service-Request", simple("api/v1/accounts/token"))
+                .setHeader(Exchange.CONTENT_TYPE, constant("application/x-www-form-urlencoded"))
+                .setBody(simple("type=verify_email_token&userId=${header.X-User-ID}"))
+                .to("direct:sd-call-finalize");
+
     }
 }

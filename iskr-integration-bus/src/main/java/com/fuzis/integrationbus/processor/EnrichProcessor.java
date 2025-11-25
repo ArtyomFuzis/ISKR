@@ -17,10 +17,14 @@ public class EnrichProcessor implements Processor {
     public void process(Exchange exchange) throws Exception {
         try {
             Map currentBody = exchange.getIn().getBody(Map.class);
+            Boolean noMeta = exchange.getIn().getHeader("X-No-Meta", Boolean.class);
+            if (noMeta != null && noMeta) {
+                exchange.getIn().setBody(currentBody);
+                exchange.getIn().setHeader(Exchange.CONTENT_TYPE, "application/json");
+                return;
+            }
             String userId = exchange.getIn().getHeader("X-User-Id", String.class);
             if(userId == null)userId = "None";
-
-
             Map<String, Object> enrichedResponse = new HashMap<>();
             enrichedResponse.put("data", currentBody);
             enrichedResponse.put("meta", Map.of(

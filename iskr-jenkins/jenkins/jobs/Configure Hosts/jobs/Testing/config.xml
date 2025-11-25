@@ -84,7 +84,7 @@
 		BASE_ANSIBLE_PARAMS = &quot;-i ../inventory/general -i ../inventory/${params.PROJECT_NAME}/hosts -i ../inventory/${params.PROJECT_NAME}/configuration&quot;
 		ANSIBLE_EXEC = &quot;/root/.local/bin/ansible&quot;
 		ANSIBLE_EXEC_PLAYBOOK = &quot;/root/.local/bin/ansible-playbook&quot;
-		DEPLOY_GROUP = &quot;deploy_db&quot;
+		DEPLOY_GROUP = &quot;deploy_testing&quot;
 	}
 	stages {
 	    stage(&quot;Test connection&quot;) {
