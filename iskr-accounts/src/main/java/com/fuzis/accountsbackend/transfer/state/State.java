@@ -7,5 +7,6 @@ public enum State
     Fail,
     Fail_NotFound,
     Fail_Conflict,
-    Fail_Not_Implemented
+    Fail_Not_Implemented,
+    Fail_Expired
 }

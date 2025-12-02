@@ -24,7 +24,7 @@ public class TokenController {
     }
 
     @PostMapping("/redeem")
-    public ResponseEntity<ChangeDTO<Token>> redeemToken(@RequestParam @NotBlank String token) {
+    public ResponseEntity<ChangeDTO<Object>> redeemToken(@RequestParam @NotBlank String token) {
         return httpUtil.handleServiceResponse(tokenService.redeemToken(token));
     }
 

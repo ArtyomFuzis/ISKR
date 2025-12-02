@@ -1,0 +1,22 @@
+---
+  - name: Deploy rabbit configuration
+    hosts: deploy_configuration_rabbit
+    tasks: 
+      
+      - name: Ensure that "configuration" dir exists
+        file:
+          path: "{{base_path}}/configuration"
+          state: directory 
+      
+      - name: Copy rabbit definitions.json
+        copy:
+          src: "/workspace/templates/confs/definitions.json"
+          dest: "{{base_path}}/configuration/rabbit_definitions.json"
+      
+      - name: Load rabbit definitions
+        shell: |
+          cd {{base_path}}/configuration && \
+          curl -u {{rabbit_admin_user}}:{{rabbit_admin_password}} -X POST -H "Content-Type: application/json" \
+          http://localhost:{{rabbit_ui_port}}/api/definitions \
+          -d @rabbit_definitions.json
+      

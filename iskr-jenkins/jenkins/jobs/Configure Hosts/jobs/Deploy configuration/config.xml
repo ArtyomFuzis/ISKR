@@ -6,13 +6,11 @@
       <jobProperties/>
       <triggers/>
       <parameters>
-        <string>INSTALL_KEYCLOAK</string>
-        <string>INSTALL_RABBIT</string>
         <string>ANSIBLE_EXTRA_KEYS</string>
-        <string>INSTALL_CONSUL</string>
+        <string>INSTALL_KEYCLOAK_CONFIGURATION</string>
+        <string>INSTALL_CONSUL_CONFIGURATION</string>
         <string>PROJECT_NAME</string>
-        <string>INSTALL_NGINX</string>
-        <string>INSTALL_INTEGRATION_BUS</string>
+        <string>INSTALL_RABBIT_CONFIGURATION</string>
       </parameters>
       <options/>
     </org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobPropertyTrackerAction>
@@ -41,28 +39,18 @@
           <trim>false</trim>
         </hudson.model.StringParameterDefinition>
         <hudson.model.BooleanParameterDefinition>
-          <name>INSTALL_CONSUL</name>
-          <description>Нужно ли установить consul?</description>
+          <name>INSTALL_CONSUL_CONFIGURATION</name>
+          <description>Нужно ли накатить конфигурацию consul?</description>
           <defaultValue>false</defaultValue>
         </hudson.model.BooleanParameterDefinition>
         <hudson.model.BooleanParameterDefinition>
-          <name>INSTALL_KEYCLOAK</name>
-          <description>Нужно ли установить keycloak?</description>
+          <name>INSTALL_KEYCLOAK_CONFIGURATION</name>
+          <description>Нужно ли накатить конфигурацию keycloak?</description>
           <defaultValue>false</defaultValue>
         </hudson.model.BooleanParameterDefinition>
         <hudson.model.BooleanParameterDefinition>
-          <name>INSTALL_RABBIT</name>
-          <description>Нужно ли установить rabbitmq?</description>
-          <defaultValue>false</defaultValue>
-        </hudson.model.BooleanParameterDefinition>
-        <hudson.model.BooleanParameterDefinition>
-          <name>INSTALL_INTEGRATION_BUS</name>
-          <description>Нужно ли установить integeration bus?</description>
-          <defaultValue>false</defaultValue>
-        </hudson.model.BooleanParameterDefinition>
-        <hudson.model.BooleanParameterDefinition>
-          <name>INSTALL_NGINX</name>
-          <description>Нужно ли установить nginx?</description>
+          <name>INSTALL_RABBIT_CONFIGURATION</name>
+          <description>Нужно ли накатить конфигурацию rabbitmq?</description>
           <defaultValue>false</defaultValue>
         </hudson.model.BooleanParameterDefinition>
         <hudson.model.StringParameterDefinition>
@@ -82,29 +70,19 @@
             description: &quot;Проект для развертывания&quot;
         )
         booleanParam(
-            name: &quot;INSTALL_CONSUL&quot;,
+            name: &quot;INSTALL_CONSUL_CONFIGURATION&quot;,
             defaultValue: false,
-            description: &quot;Нужно ли установить consul?&quot;
+            description: &quot;Нужно ли накатить конфигурацию consul?&quot;
         )
         booleanParam(
-            name: &quot;INSTALL_KEYCLOAK&quot;,
+            name: &quot;INSTALL_KEYCLOAK_CONFIGURATION&quot;,
             defaultValue: false,
-            description: &quot;Нужно ли установить keycloak?&quot;
+            description: &quot;Нужно ли накатить конфигурацию keycloak?&quot;
         )
         booleanParam(
-            name: &quot;INSTALL_RABBIT&quot;,
+            name: &quot;INSTALL_RABBIT_CONFIGURATION&quot;,
             defaultValue: false,
-            description: &quot;Нужно ли установить rabbitmq?&quot;
-        )
-        booleanParam(
-            name: &quot;INSTALL_INTEGRATION_BUS&quot;,
-            defaultValue: false,
-            description: &quot;Нужно ли установить integeration bus?&quot;
-        )
-		booleanParam(
-            name: &quot;INSTALL_NGINX&quot;,
-            defaultValue: false,
-            description: &quot;Нужно ли установить nginx?&quot;
+            description: &quot;Нужно ли накатить конфигурацию rabbitmq?&quot;
         )
         string(
             name: &quot;ANSIBLE_EXTRA_KEYS&quot;,
@@ -117,7 +95,7 @@
 		BASE_ANSIBLE_PARAMS = &quot;-i ../inventory/general -i ../inventory/${params.PROJECT_NAME}/hosts -i ../inventory/${params.PROJECT_NAME}/configuration&quot;
 		ANSIBLE_EXEC = &quot;/root/.local/bin/ansible&quot;
 		ANSIBLE_EXEC_PLAYBOOK = &quot;/root/.local/bin/ansible-playbook&quot;
-		DEPLOY_GROUP = &quot;deploy_esb&quot;
+		DEPLOY_GROUP = &quot;deploy_configuration&quot;
 	}
 	stages {
 	    stage(&quot;Test connection&quot;) {
@@ -133,56 +111,58 @@
                 }
             }
         }
-		stage(&quot;Install consul&quot;) {
-			when {
-				expression { params.INSTALL_CONSUL }
-			}
-			steps {
-				script {
-					 withCredentials([string(credentialsId: &apos;ansible-vault-password&apos;, variable: &apos;VAULT_PASS&apos;)]) {
-					  sh &quot;&quot;&quot;
-						${env.PREPARE_CMD} &amp;&amp; \
-						${env.ANSIBLE_EXEC_PLAYBOOK} ${env.BASE_ANSIBLE_PARAMS} ./esb/deploy-consul.yml \
-						${params.ANSIBLE_EXTRA_KEYS} --vault-password-file &lt;(echo &quot;$VAULT_PASS&quot;)
-						&quot;&quot;&quot;
-					 }
+		stage(&quot;Prepare build&quot;) {
+			parallel{
+				stage(&quot;Install consul configuration&quot;) {
+					when {
+						expression { params.INSTALL_CONSUL_CONFIGURATION }
+					}
+					steps {
+						script {
+							 withCredentials([string(credentialsId: &apos;ansible-vault-password&apos;, variable: &apos;VAULT_PASS&apos;)]) {
+							  sh &quot;&quot;&quot;
+								${env.PREPARE_CMD} &amp;&amp; \
+								${env.ANSIBLE_EXEC_PLAYBOOK} ${env.BASE_ANSIBLE_PARAMS} ./configuration/deploy-consul-configuration.yml \
+								${params.ANSIBLE_EXTRA_KEYS} --vault-password-file &lt;(echo &quot;$VAULT_PASS&quot;)
+								&quot;&quot;&quot;
+							 }
+						}
+					}
+				}
+				stage(&quot;Install keycloak&quot;) {
+					when {
+						expression { params.INSTALL_KEYCLOAK_CONFIGURATION }
+					}
+					steps {
+						script {
+							 withCredentials([string(credentialsId: &apos;ansible-vault-password&apos;, variable: &apos;VAULT_PASS&apos;)]) {
+							  sh &quot;&quot;&quot;
+								${env.PREPARE_CMD} &amp;&amp; \
+								${env.ANSIBLE_EXEC_PLAYBOOK} ${env.BASE_ANSIBLE_PARAMS} ./configuration/deploy-keycloak-configuration.yml \
+								${params.ANSIBLE_EXTRA_KEYS} --vault-password-file &lt;(echo &quot;$VAULT_PASS&quot;)
+								&quot;&quot;&quot;
+							 }
+						}
+					}
+				}
+				stage(&quot;Install rabbit&quot;) {
+					when {
+						expression { params.INSTALL_RABBIT_CONFIGURATION }
+					}
+					steps {
+						script {
+							 withCredentials([string(credentialsId: &apos;ansible-vault-password&apos;, variable: &apos;VAULT_PASS&apos;)]) {
+							  sh &quot;&quot;&quot;
+								${env.PREPARE_CMD} &amp;&amp; \
+								${env.ANSIBLE_EXEC_PLAYBOOK} ${env.BASE_ANSIBLE_PARAMS} ./configuration/deploy-rabbitmq-configuration.yml \
+								${params.ANSIBLE_EXTRA_KEYS} --vault-password-file &lt;(echo &quot;$VAULT_PASS&quot;)
+								&quot;&quot;&quot;
+							 }
+						}
+					}
 				}
 			}
 		}
-		stage(&quot;Install keycloak&quot;) {
-			when {
-				expression { params.INSTALL_KEYCLOAK }
-			}
-			steps {
-				script {
-					 withCredentials([string(credentialsId: &apos;ansible-vault-password&apos;, variable: &apos;VAULT_PASS&apos;)]) {
-					  sh &quot;&quot;&quot;
-						${env.PREPARE_CMD} &amp;&amp; \
-						${env.ANSIBLE_EXEC_PLAYBOOK} ${env.BASE_ANSIBLE_PARAMS} ./esb/deploy-keycloak.yml \
-						${params.ANSIBLE_EXTRA_KEYS} --vault-password-file &lt;(echo &quot;$VAULT_PASS&quot;)
-						&quot;&quot;&quot;
-					 }
-				}
-			}
-		}
-		stage(&quot;Install rabbit&quot;) {
-			when {
-				expression { params.INSTALL_RABBIT }
-			}
-			steps {
-				script {
-					 withCredentials([string(credentialsId: &apos;ansible-vault-password&apos;, variable: &apos;VAULT_PASS&apos;)]) {
-					  sh &quot;&quot;&quot;
-						${env.PREPARE_CMD} &amp;&amp; \
-						${env.ANSIBLE_EXEC_PLAYBOOK} ${env.BASE_ANSIBLE_PARAMS} ./esb/deploy-rabbit.yml \
-						${params.ANSIBLE_EXTRA_KEYS} --vault-password-file &lt;(echo &quot;$VAULT_PASS&quot;)
-						&quot;&quot;&quot;
-					 }
-				}
-			}
-		}
-		
-		
 	}
 }</script>
     <sandbox>true</sandbox>

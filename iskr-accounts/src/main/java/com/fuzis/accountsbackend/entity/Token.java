@@ -1,5 +1,6 @@
 package com.fuzis.accountsbackend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -20,6 +21,7 @@ public class Token {
     private Integer ct_id;
 
     @Column(name = "token_key")
+    @JsonIgnore
     private String tokenKey;
 
     private ZonedDateTime till_date;
@@ -28,6 +30,7 @@ public class Token {
     @JoinColumn(name = "token_type")
     private TokenType tokenType;
 
+    @JsonIgnore
     @Column(name = "token_body")
     private String tokenBody;
 

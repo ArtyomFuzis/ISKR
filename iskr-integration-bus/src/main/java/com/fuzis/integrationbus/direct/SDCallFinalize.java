@@ -1,6 +1,7 @@
 package com.fuzis.integrationbus.direct;
 
 import com.fuzis.integrationbus.processor.BackendErrorProcessor;
+import com.fuzis.integrationbus.processor.UnmarshallProcessor;
 import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
@@ -14,8 +15,11 @@ public class SDCallFinalize extends RouteBuilder {
 
     private final BackendErrorProcessor backendErrorProcessor;
 
-    public SDCallFinalize(@Autowired BackendErrorProcessor backendErrorProcessor) {
+    private final UnmarshallProcessor unmarshallProcessor;
+
+    public SDCallFinalize(@Autowired BackendErrorProcessor backendErrorProcessor,  @Autowired UnmarshallProcessor unmarshallProcessor) {
         this.backendErrorProcessor = backendErrorProcessor;
+        this.unmarshallProcessor = unmarshallProcessor;
     }
 
     @Override
@@ -23,7 +27,7 @@ public class SDCallFinalize extends RouteBuilder {
         from("direct:sd-call-finalize")
                 .routeId("sd-call-finalize-direct")
                 .to("direct:sd-call")
-                .unmarshal().json(JsonLibrary.Jackson, Map.class)
+                .process(unmarshallProcessor)
                 .filter(header(Exchange.HTTP_RESPONSE_CODE).isEqualTo(200))
                     .log("Backend Call Successful")
                 .end()

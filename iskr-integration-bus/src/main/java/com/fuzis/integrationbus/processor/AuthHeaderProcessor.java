@@ -12,6 +12,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.Arrays;
+
 
 @Component
 public class AuthHeaderProcessor implements Processor {
@@ -63,7 +65,10 @@ public class AuthHeaderProcessor implements Processor {
     private void checkPermissions(Exchange exchange, UserInfo userInfo) throws Exception {
         String roles = exchange.getIn().getHeader("X-Roles-Required", String.class);
 
-        String[] roleList = roles.split(",");
+        String[] roleList = Arrays.stream(roles.split(","))
+                .map(String::trim)
+                .filter(h -> !h.isEmpty())
+                .toArray(String[]::new);
 
         if(!userInfo.hasAllRoles(roleList)){
             throw new AuthorizationException("No access to this resource");

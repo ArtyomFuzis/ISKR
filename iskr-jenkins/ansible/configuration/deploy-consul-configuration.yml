@@ -1,0 +1,35 @@
+---
+  - name: Deploy consul configuration
+    hosts: deploy_configuration_consul
+    tasks: 
+      - name: Ensure that "configuration" dir exists
+        file:
+          path: "{{base_path}}/configuration"
+          state: directory 
+      
+      - name: Copy accounts configuration
+        template: 
+           src: "/workspace/templates/esb/configuration/accounts.j2"
+           dest: "{{base_path}}/configuration/accounts.yml"
+
+      - name: Load accounts configuration 
+        shell: |
+          cd {{base_path}}/configuration && curl \
+          --request PUT \
+          --data-binary @accounts.yml \
+          http://localhost:{{consul_port}}/v1/kv/config/AccountsBackend/data
+      
+      
+      - name: Copy integration configuration
+        template: 
+           src: "/workspace/templates/esb/configuration/integration.j2"
+           dest: "{{base_path}}/configuration/integration.yml"
+
+      - name: Load integration configuration 
+        shell: |
+          cd {{base_path}}/configuration && curl \
+          --request PUT \
+          --data-binary @integration.yml \
+          http://localhost:{{consul_port}}/v1/kv/config/IntegrationBus/data
+        
+      

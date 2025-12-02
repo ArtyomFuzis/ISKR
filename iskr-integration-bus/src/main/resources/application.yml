@@ -1,26 +1,26 @@
 spring:
   application:
-    name: IntegrationBus
+    name: ${SERVICE_NAME}
   config:
     import: "consul:"
   cloud:
     consul:
-      host: 91.186.199.152
-      port: 8500
+      host: ${CONSUL_HOST}
+      port: ${CONSUL_PORt}
       discovery:
         instance-id: ${spring.application.name}:${random.uuid}
-        hostname: localhost
+        hostname: ${DISCOVERY_HOSTNAME}
       config:
         enabled: true
-        defaultContext: apps
+        defaultContext: ${CONSUL_KV_DEFAULT}
         format: YAML
         watch:
           enabled: true
 server:
-  port: 8025
+  port: ${PORT}
 
 keycloak:
-  secret: "**********"
-  admin_user: "ssoadmin"
-  admin_password: "1111"
-  admin_realm: "master"
+  secret: ${SSO_SECRET}
+  admin_user: ${SSO_USERNAME}
+  admin_password: ${SSO_PASSWORD}
+  admin_realm: ${SSO_REALM}

@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import java.time.ZonedDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -16,7 +17,7 @@ public class EnrichProcessor implements Processor {
     @Override
     public void process(Exchange exchange) throws Exception {
         try {
-            Map currentBody = exchange.getIn().getBody(Map.class);
+            Object currentBody = exchange.getIn().getBody();
             Boolean noMeta = exchange.getIn().getHeader("X-No-Meta", Boolean.class);
             if (noMeta != null && noMeta) {
                 exchange.getIn().setBody(currentBody);
@@ -30,7 +31,7 @@ public class EnrichProcessor implements Processor {
             enrichedResponse.put("meta", Map.of(
                     "processedBy", "integration-bus",
                     "userId", userId,
-                    "timestamp", java.time.Instant.now().toString()
+                    "timestamp", ZonedDateTime.now().toString()
             ));
 
             exchange.getIn().setBody(enrichedResponse);

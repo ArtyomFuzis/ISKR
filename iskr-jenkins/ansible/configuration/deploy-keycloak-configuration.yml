@@ -1,0 +1,36 @@
+---
+  - name: Deploy keycloak configuration
+    hosts: deploy_configuration_keycloak
+    tasks: 
+      - name: Give access to socket for install user
+        file: 
+          path: "/var/run/docker.sock"
+          state: file 
+          owner: "{{ansible_user}}"
+        become: yes
+      
+      - name: Ensure that "configuration" dir exists
+        file:
+          path: "{{base_path}}/configuration"
+          state: directory 
+      
+      - name: Copy keycloak realm-export.json
+        copy:
+          src: "/workspace/templates/confs/realm-export.json"
+          dest: "{{base_path}}/configuration/realm-export.json"
+      
+      - name: Copy realm-export to keycloak container
+        shell: |
+          cd {{base_path}}/configuration && \
+          docker cp realm-export.json {{keycloak_container}}:/tmp/
+      
+      - name: Upload realm-export to keycloak
+        shell: |
+          docker exec -it {{keycloak_container}} /opt/keycloak/bin/kc.sh import \
+          --file /tmp/realm-export.json
+
+      - name: Restart keycloak
+        shell: |
+          docker restart {{keycloak_container}}
+        
+      

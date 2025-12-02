@@ -16,6 +16,7 @@ public class HttpUtil
             case Fail_Conflict -> new ResponseEntity<>(res, HttpStatus.CONFLICT);
             case Fail -> new ResponseEntity<>(res, HttpStatus.INTERNAL_SERVER_ERROR);
             case Fail_Not_Implemented ->  new ResponseEntity<>(res, HttpStatus.NOT_IMPLEMENTED);
+            case Fail_Expired -> new ResponseEntity<>(res, HttpStatus.GONE);
         };
     }
 }

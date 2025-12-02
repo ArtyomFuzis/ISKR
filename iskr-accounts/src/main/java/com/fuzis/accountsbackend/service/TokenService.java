@@ -11,10 +11,14 @@ import com.fuzis.accountsbackend.transfer.ChangeDTO;
 import com.fuzis.accountsbackend.transfer.messaging.EmailDTO;
 import com.fuzis.accountsbackend.transfer.messaging.EmailType;
 import com.fuzis.accountsbackend.transfer.state.State;
+import com.fuzis.accountsbackend.util.IntegrationRequest;
 import com.fuzis.accountsbackend.util.TokenGenerator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 
 import java.time.ZonedDateTime;
 import java.util.Objects;
@@ -26,8 +30,8 @@ public class TokenService {
     private final RabbitSendService  rabbitSendService;
     private final UserRepository userRepository;
     private final TokenGenerator tokenGenerator;
-    private final UserProfileRepository userProfileRepository;
     private final TokenTypeRepository tokenTypeRepository;
+    private final IntegrationRequest integrationRequest;
 
     @Value("${token.base_expire}")
     private Integer token_base_expire;
@@ -37,23 +41,43 @@ public class TokenService {
                         RabbitSendService rabbitSendService,
                         UserRepository userRepository,
                         TokenGenerator tokenGenerator,
-                        UserProfileRepository userProfileRepository,
-                        TokenTypeRepository tokenTypeRepository) {
+                        TokenTypeRepository tokenTypeRepository,
+                        IntegrationRequest integrationRequest) {
         this.tokenRepository = tokenRepository;
         this.rabbitSendService = rabbitSendService;
         this.userRepository = userRepository;
         this.tokenGenerator = tokenGenerator;
-        this.userProfileRepository = userProfileRepository;
         this.tokenTypeRepository = tokenTypeRepository;
+        this.integrationRequest =  integrationRequest;
     }
 
-    public ChangeDTO<Token> redeemToken(String token_key) {
+    public ChangeDTO<Object> redeemToken(String token_key) {
         Token token = tokenRepository.findByTokenKey(token_key);
         if (token == null) {
             return new ChangeDTO<>(State.Fail_NotFound, "Not able to find the token to redeem", null);
         }
+        if(ZonedDateTime.now().isAfter(token.getTill_date().plusSeconds(ZonedDateTime.))){
+            return new ChangeDTO<>(State.Fail_Expired, "Token is expired", null);
+        }
         if(Objects.equals(token.getTokenType().getTtName(), "verify_email_token")){
-
+            try {
+                Optional<User> user = userRepository.findById(Integer.parseInt(token.getTokenBody()));
+                if(user.isPresent()) {
+                    MultiValueMap<String, String> sso_request_body = new LinkedMultiValueMap<>();
+                    sso_request_body.add("X-User-Id", user.get().getUser_id().toString());
+                    var response = integrationRequest.sendPostRequestIntegration("v1/accounts/verify-email-sso", sso_request_body);
+                    if(response.getStatusCode() != HttpStatus.OK){
+                        return new ChangeDTO<>(State.Fail, "Unable to set email verification on sso", response.getBody());
+                    }
+                    user.get().getProfile().setEmail_verified(true);
+                }
+                else{
+                    return new ChangeDTO<>(State.Fail_BadData, "Invalid Token", null);
+                }
+            }
+            catch (Exception e) {
+                return new ChangeDTO<>(State.Fail_BadData, "Invalid Token", null);
+            }
         }
         if(Objects.equals(token.getTokenType().getTtName(), "reset_password_token")){
             return new ChangeDTO<>(State.Fail_NotFound, "Unable to redeem password change token directly, use another endpoint", null);

@@ -48,13 +48,16 @@ public class ChangeSSOUserDataProcessor implements Processor {
         if(exchange.getIn().getHeader("New-Username") != null){
             body.put("username", exchange.getIn().getHeader("New-Username",  String.class));
         }
+        if(exchange.getIn().getHeader("Email-Verified") != null){
+            body.put("emailVerified", exchange.getIn().getHeader("Email-Verified",  String.class));
+        }
         Integer return_code = this.processorUtils.ssoRequest(producerTemplate,exchange,httpEndpoint, body,Map.of(
                 "Authorization", "Bearer "+exchange.getIn().getHeader("X-Tech-Token"),
                 Exchange.HTTP_METHOD, "PUT"
         ), ProcessorUtils.SSORequestBodyType.JSON);
         exchange.getIn().removeHeader("X-Tech-Token");
         if(return_code != 204){
-            throw new ServiceFall("Unable to process changing username in SSO");
+            throw new ServiceFall("Unable to process changing params in SSO");
         }
     }
 }

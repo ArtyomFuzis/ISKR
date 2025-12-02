@@ -1,5 +1,6 @@
 package com.fuzis.accountsbackend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -20,6 +21,7 @@ public class UserProfile {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer up_id;
 
+    @JsonIgnore
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;
@@ -29,6 +31,8 @@ public class UserProfile {
     private String nickname;
 
     private String email;
+
+    private Boolean email_verified;
 
     private String profile_description;
 

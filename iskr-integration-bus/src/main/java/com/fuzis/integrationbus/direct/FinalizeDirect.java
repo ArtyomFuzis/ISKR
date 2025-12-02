@@ -1,6 +1,8 @@
 package com.fuzis.integrationbus.direct;
 
 import com.fuzis.integrationbus.processor.EnrichProcessor;
+import com.fuzis.integrationbus.processor.MarshallProcessor;
+import com.fuzis.integrationbus.processor.UnmarshallProcessor;
 import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.converter.stream.ReaderCache;
@@ -14,14 +16,21 @@ public class FinalizeDirect extends RouteBuilder {
 
     private final EnrichProcessor enrichProcessor;
 
-    public FinalizeDirect(EnrichProcessor enrichProcessor) {
+    private final MarshallProcessor marshallProcessor;
+
+    private final UnmarshallProcessor unmarshallProcessor;
+
+    public FinalizeDirect(EnrichProcessor enrichProcessor, MarshallProcessor marshallProcessor,  UnmarshallProcessor unmarshallProcessor) {
         this.enrichProcessor = enrichProcessor;
+        this.marshallProcessor = marshallProcessor;
+        this.unmarshallProcessor = unmarshallProcessor;
     }
 
     @Override
     public void configure() throws Exception {
         from("direct:finalize-request")
                 .routeId("finalize-request-direct")
+                .process(unmarshallProcessor)
                 .process(enrichProcessor)
                 .choice()
                     .when(header("X-Debug").isNotEqualTo("true"))
@@ -43,18 +52,7 @@ public class FinalizeDirect extends RouteBuilder {
                         .removeHeader("X-Service-Url")
                         .removeHeader("X-No-Meta")
                 .end()
-                .process(exchange -> {
-                    Map<String, Object> body = exchange.getIn().getBody(Map.class);
-                    Map<String, Object> data = (Map<String, Object>) body.get("data");
-                    if (data != null && data.containsKey("body") && data.get("body") instanceof ReaderCache) {
-                        ReaderCache readerCache = (ReaderCache) data.get("body");
-                        String content = exchange.getContext().getTypeConverter()
-                                .convertTo(String.class, exchange, readerCache);
-                        data.put("body", content);
-                    }
-
-                })
-                .marshal().json()
+                .process(marshallProcessor)
                 .end();
     }
 }

@@ -12,11 +12,20 @@ import java.util.Map;
 @Component
 public class BackendErrorProcessor implements Processor {
     private static final Logger log = LoggerFactory.getLogger(BackendErrorProcessor.class);
+    private final UnmarshallProcessor unmarshaller;
 
+    public BackendErrorProcessor(UnmarshallProcessor unmarshaller) {
+        this.unmarshaller = unmarshaller;
+    }
     @Override
     public void process(Exchange exchange) throws Exception {
+        this.unmarshaller.process(exchange);
+        Boolean noMeta = exchange.getIn().getHeader("X-No-Meta", Boolean.class);
+        if((noMeta != null) && noMeta){
+            return;
+        }
         Integer statusCode = exchange.getIn().getHeader(Exchange.HTTP_RESPONSE_CODE, Integer.class);
-        String body = exchange.getIn().getBody(String.class);
+        Object body = exchange.getIn().getBody(Object.class);
         String userId = exchange.getIn().getHeader("X-User-ID", String.class);
 
         log.error("Service returned error for user {}: {}", userId, statusCode);

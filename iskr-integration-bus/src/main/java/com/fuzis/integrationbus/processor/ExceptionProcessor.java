@@ -12,7 +12,11 @@ import java.util.Objects;
 
 @Component
 public class ExceptionProcessor implements Processor {
+    private final UnmarshallProcessor unmarshaller;
 
+    public ExceptionProcessor(UnmarshallProcessor unmarshaller) {
+        this.unmarshaller = unmarshaller;
+    }
     @Override
     public void process(Exchange exchange) throws Exception {
         Exception exception = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, Exception.class);
@@ -23,6 +27,7 @@ public class ExceptionProcessor implements Processor {
             errorResponse.put("rootCause", exception.getCause().getMessage());
         }
         if(exchange.getIn().getHeader("X-Include-Body") != null && exchange.getIn().getHeader("X-Include-Body", Boolean.class) == true) {
+            unmarshaller.process(exchange);
             errorResponse.put("body", exchange.getIn().getBody());
         }
         exchange.getIn().setHeader(Exchange.CONTENT_TYPE, "application/json");
