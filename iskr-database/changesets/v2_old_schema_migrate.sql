@@ -18,7 +18,6 @@ CREATE TABLE IMAGES.IMAGE_LINKS(
 );
 
 -- changeset fuzis:3
-CREATE TYPE ACCOUNTS.USER_STATUS AS ENUM ('banned', 'notBanned');
 CREATE TABLE ACCOUNTS.USER_PROFILES(
     up_id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL UNIQUE,
@@ -26,9 +25,9 @@ CREATE TABLE ACCOUNTS.USER_PROFILES(
     nickname VARCHAR(255) NOT NULL,
     email VARCHAR(512),
     profile_description TEXT,
-    birth_date TIMESTAMP,
+    birth_date TIMESTAMP WITH TIME ZONE,
     email_verified BOOLEAN NOT NULL DEFAULT false,
-    status ACCOUNTS.USER_STATUS NOT NULL,
+    status VARCHAR(100) NOT NULL,
     FOREIGN KEY (user_id) REFERENCES ACCOUNTS.USERS(user_id),
     FOREIGN KEY (user_imgl_id) REFERENCES IMAGES.IMAGE_LINKS(imgl_id)
 );
@@ -54,7 +53,7 @@ CREATE TABLE BOOKS.GENRES(
 CREATE TABLE BOOKS.AUTHORS(
     author_id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL, 
-    birth_date TIMESTAMP,
+    birth_date TIMESTAMP WITH TIME ZONE,
     description TEXT,
     real_name VARCHAR(255)
 );
@@ -99,7 +98,7 @@ CREATE TABLE BOOKS.READING_GOALS(
     pgoal_id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL,
     period BOOKS.GOALS_PERIODS NOT NULL, 
-    start_date TIMESTAMP NOT NULL DEFAULT NOW(),
+    start_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     amount INTEGER NOT NULL, 
     goal_type BOOKS.GOALS_TYPE NOT NULL,
     CHECK (amount > 0), 
@@ -111,7 +110,7 @@ CREATE TABLE BOOKS.BOOK_READING_STATUS(
     book_id INTEGER NOT NULL,
     reading_status BOOKS.READING_STATUS NOT NULL,
     page_read INTEGER NOT NULL DEFAULT 0,
-    last_read_date TIMESTAMP, 
+    last_read_date TIMESTAMP WITH TIME ZONE, 
     FOREIGN KEY (user_id) REFERENCES ACCOUNTS.USERS(user_id),
     FOREIGN KEY (book_id) REFERENCES BOOKS.BOOKS(book_id)
 );

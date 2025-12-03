@@ -1,6 +1,7 @@
 package com.fuzis.accountsbackend.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fuzis.accountsbackend.entity.enumerate.UserStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -38,5 +39,6 @@ public class UserProfile {
 
     private ZonedDateTime birth_date;
 
-    private String status;
+    @Enumerated(EnumType.STRING)
+    private UserStatus status;
 }

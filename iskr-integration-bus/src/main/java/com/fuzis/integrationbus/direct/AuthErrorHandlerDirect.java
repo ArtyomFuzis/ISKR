@@ -20,7 +20,7 @@ public class AuthErrorHandlerDirect extends RouteBuilder {
     public void configure(){
         from("direct:auth-error-handler")
             .routeId("auth-error-direct")
-            .setHeader("X-Include-Body", constant(true))
+            .setHeader("X-Include-Body", constant(false))
             .process(exceptionProcessor)
             .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
             .to("direct:finalize-request")

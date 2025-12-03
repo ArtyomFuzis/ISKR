@@ -5,6 +5,7 @@ import com.fuzis.integrationbus.exception.AuthorizationException;
 import com.fuzis.integrationbus.exception.ServiceFall;
 import com.fuzis.integrationbus.processor.AuthHeaderProcessor;
 import com.fuzis.integrationbus.processor.ParseCookieProcessor;
+import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;

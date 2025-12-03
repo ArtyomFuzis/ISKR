@@ -20,9 +20,12 @@ public class AccountsUserRoutes extends RouteBuilder {
 
     private final ChangeSSOUserDataProcessor changeSSOUserDataProcessor;
 
+    private final SearchUserProcessor searchUserProcessor;
+
     @Autowired
-    public AccountsUserRoutes(ChangeSSOUserDataProcessor changeSSOUserDataProcessor) {
+    public AccountsUserRoutes(ChangeSSOUserDataProcessor changeSSOUserDataProcessor,  SearchUserProcessor searchUserProcessor) {
         this.changeSSOUserDataProcessor = changeSSOUserDataProcessor;
+        this.searchUserProcessor = searchUserProcessor;
     }
 
     @Override
@@ -118,9 +121,10 @@ public class AccountsUserRoutes extends RouteBuilder {
                     .handled(true)
                     .to("direct:service-error-handler")
                 .end()
-                .setHeader("X-Headers-Required", constant("Email-Verified"))
+                .setHeader("X-Headers-Required", constant("Email-Verified, X-User-ID"))
                 .setHeader("X-Headers-Forbidden", constant("New-Nickname, New-Username"))
                 .to("direct:check-params")
+                .process(searchUserProcessor)
                 .process(changeSSOUserDataProcessor)
                 .end();
 

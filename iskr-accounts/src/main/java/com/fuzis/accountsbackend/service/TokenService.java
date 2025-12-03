@@ -69,10 +69,12 @@ public class TokenService {
                     sso_request_body.add("X-User-Id", user.get().getUser_id().toString());
                     sso_request_body.add("Email-Verified", "true");
                     var response = integrationRequest.sendPostRequestIntegration("v1/accounts/verify-email-sso", sso_request_body);
-                    if(response.getStatusCode() != HttpStatus.OK){
+                    if(response.getStatusCode() != HttpStatus.NO_CONTENT){
                         return new ChangeDTO<>(State.Fail, "Unable to set email verification on sso", response.getBody());
                     }
                     user.get().getProfile().setEmail_verified(true);
+                    userRepository.save(user.get());
+                    return new ChangeDTO<>(State.OK, "Email successfully verified", null);
                 }
                 else{
                     return new ChangeDTO<>(State.Fail_BadData, "Invalid Token, User Not Found", null);
@@ -88,7 +90,7 @@ public class TokenService {
         if(Objects.equals(token.getTokenType().getTtName(), "reset_password_token")){
             return new ChangeDTO<>(State.Fail_NotFound, "Unable to redeem password change token directly, use another endpoint", null);
         }
-        return new ChangeDTO<>(State.Fail_Not_Implemented, "Unknown token to redeem", null);
+        else return new ChangeDTO<>(State.Fail_Not_Implemented, "Unknown token to redeem", null);
     }
 
     public ChangeDTO<Token> createToken(Integer userId, String type) {
