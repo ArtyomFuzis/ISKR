@@ -26,6 +26,7 @@ public class SDCallFinalize extends RouteBuilder {
     public void configure() throws Exception {
         from("direct:sd-call-finalize")
                 .routeId("sd-call-finalize-direct")
+                .log("Backend Call Start")
                 .to("direct:sd-call")
                 .process(unmarshallProcessor)
                 .filter(header(Exchange.HTTP_RESPONSE_CODE).isEqualTo(200))

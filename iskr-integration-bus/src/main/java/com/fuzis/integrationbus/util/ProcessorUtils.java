@@ -31,7 +31,7 @@ public class ProcessorUtils {
     }
 
     public <T> Integer ssoRequest(ProducerTemplate producerTemplate, Exchange exchange,
-                             String httpEndpoint, Map<String, String> request, Map<String,String> headers, SSORequestBodyType type) throws Exception {
+                             String httpEndpoint, Map<String, Object> request, Map<String,String> headers, SSORequestBodyType type) throws Exception {
 
         Exchange responseExchange = producerTemplate.request(httpEndpoint, ex -> {
 

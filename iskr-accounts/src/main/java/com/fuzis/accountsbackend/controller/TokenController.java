@@ -3,6 +3,7 @@ package com.fuzis.accountsbackend.controller;
 import com.fuzis.accountsbackend.entity.Token;
 import com.fuzis.accountsbackend.service.TokenService;
 import com.fuzis.accountsbackend.transfer.ChangeDTO;
+import com.fuzis.accountsbackend.transfer.SelectDTO;
 import com.fuzis.accountsbackend.util.HttpUtil;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -31,5 +32,15 @@ public class TokenController {
     @PostMapping
     public ResponseEntity<ChangeDTO<Token>> createToken(@RequestParam @Min(0) Integer userId, @RequestParam @NotBlank String type) {
         return httpUtil.handleServiceResponse(tokenService.createToken(userId, type));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<ChangeDTO> createResetToken(@RequestParam @NotBlank String login) {
+        return httpUtil.handleServiceResponse(tokenService.createResetToken(login));
+    }
+
+    @PostMapping("/reset-password-confirm")
+    public ResponseEntity<ChangeDTO> redeemResetToken(@RequestParam @NotBlank String token, @RequestParam @NotBlank String password) {
+        return httpUtil.handleServiceResponse(tokenService.redeemResetPasswordToken(token, password));
     }
 }

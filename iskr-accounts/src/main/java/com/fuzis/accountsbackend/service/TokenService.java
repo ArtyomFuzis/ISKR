@@ -2,12 +2,14 @@ package com.fuzis.accountsbackend.service;
 
 import com.fuzis.accountsbackend.entity.Token;
 import com.fuzis.accountsbackend.entity.User;
+import com.fuzis.accountsbackend.entity.UserProfile;
 import com.fuzis.accountsbackend.messaging.RabbitSendService;
 import com.fuzis.accountsbackend.repository.TokenRepository;
 import com.fuzis.accountsbackend.repository.TokenTypeRepository;
 import com.fuzis.accountsbackend.repository.UserProfileRepository;
 import com.fuzis.accountsbackend.repository.UserRepository;
 import com.fuzis.accountsbackend.transfer.ChangeDTO;
+import com.fuzis.accountsbackend.transfer.SelectDTO;
 import com.fuzis.accountsbackend.transfer.messaging.EmailDTO;
 import com.fuzis.accountsbackend.transfer.messaging.EmailType;
 import com.fuzis.accountsbackend.transfer.state.State;
@@ -23,6 +25,7 @@ import org.springframework.web.client.RestClientException;
 
 import java.io.IOException;
 import java.time.ZonedDateTime;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -34,6 +37,7 @@ public class TokenService {
     private final TokenGenerator tokenGenerator;
     private final TokenTypeRepository tokenTypeRepository;
     private final IntegrationRequest integrationRequest;
+    private final UserProfileRepository userProfileRepository;
 
     @Value("${token.base_expire}")
     private Integer token_base_expire;
@@ -44,13 +48,15 @@ public class TokenService {
                         UserRepository userRepository,
                         TokenGenerator tokenGenerator,
                         TokenTypeRepository tokenTypeRepository,
-                        IntegrationRequest integrationRequest) {
+                        IntegrationRequest integrationRequest,
+                        UserProfileRepository  userProfileRepository) {
         this.tokenRepository = tokenRepository;
         this.rabbitSendService = rabbitSendService;
         this.userRepository = userRepository;
         this.tokenGenerator = tokenGenerator;
         this.tokenTypeRepository = tokenTypeRepository;
         this.integrationRequest =  integrationRequest;
+        this.userProfileRepository = userProfileRepository;
     }
 
     public ChangeDTO<Object> redeemToken(String token_key) {
@@ -88,24 +94,34 @@ public class TokenService {
             }
         }
         if(Objects.equals(token.getTokenType().getTtName(), "reset_password_token")){
-            return new ChangeDTO<>(State.Fail_NotFound, "Unable to redeem password change token directly, use another endpoint", null);
+            Optional<User> user = userRepository.findById(Integer.parseInt(token.getTokenBody()));
+            if(user.isPresent()) {
+                return new ChangeDTO<>(State.OK, "Token granted", user);
+            }
+            else{
+                return new ChangeDTO<>(State.Fail_BadData, "Invalid Token, User Not Found", null);
+            }
         }
         else return new ChangeDTO<>(State.Fail_Not_Implemented, "Unknown token to redeem", null);
     }
 
     public ChangeDTO<Token> createToken(Integer userId, String type) {
+        Optional<User> user = userRepository.findById(userId);
+        if(user.isEmpty()) {
+            return new ChangeDTO<>(State.Fail_NotFound, "User not found", null);
+        }
+        return createTokenInner(user.get(), type);
+    }
+
+    public ChangeDTO<Token> createTokenInner(User user, String type) {
         try {
-            Optional<User> user = userRepository.findById(userId);
-            if(user.isEmpty()) {
-                throw new RuntimeException("User not found");
-            }
             if(this.tokenTypeRepository.getTokenTypeByttName(type) == null){
                 return new ChangeDTO<>(State.Fail_Not_Implemented, "Unknown token type to create", null);
             }
             Token token = tokenRepository.save(new Token(tokenGenerator.getTokenKey(), ZonedDateTime.now().plusSeconds(token_base_expire),
-                    this.tokenTypeRepository.getTokenTypeByttName(type), userId.toString()));
+                    this.tokenTypeRepository.getTokenTypeByttName(type), user.getUser_id().toString()));
             EmailType emailType = EmailType.getByTokenType(type);
-            rabbitSendService.send_email(new EmailDTO<>(user.get().getProfile().getEmail(),
+            rabbitSendService.send_email(new EmailDTO<>(user.getProfile().getEmail(),
                     emailType,
                     token.getTokenKey()));
             return new ChangeDTO<>(State.OK, "Token sent", token);
@@ -113,6 +129,47 @@ public class TokenService {
         catch (Exception e) {
             return new ChangeDTO<>(State.Fail, "Unknown error ("+e+") " + e.getMessage(), null);
         }
+    }
 
+    public ChangeDTO createResetToken(String login) {
+        Optional<UserProfile> user = userProfileRepository.findByUsernameOrEmail(login);
+        if(user.isEmpty()) {
+            return new ChangeDTO<>(State.OK, "Token sent if user is present", null);
+        }
+        var ret_val = createTokenInner(user.get().getUser(), "reset_password_token");
+        if(ret_val.getState() == State.OK)return new ChangeDTO<>(State.OK, "Token sent if user is present", null);
+        return new ChangeDTO<>(State.Fail, "Unknown error", null);
+    }
+    public ChangeDTO redeemResetPasswordToken(String token, String password) {
+        try {
+            MultiValueMap<String, String> redeem_token_body = new LinkedMultiValueMap<>();
+            redeem_token_body.add("Token", token);
+            var response = integrationRequest.sendPostRequestIntegration("v1/accounts/redeem-token", redeem_token_body);
+            if (response.getStatusCode() != HttpStatus.OK) {
+                if(response.getStatusCode() == HttpStatus.NOT_FOUND) {
+                    return new ChangeDTO<>(State.Fail_NotFound, "Unknown token", response.getBody());
+                } else if (response.getStatusCode() == HttpStatus.GONE) {
+                    return new ChangeDTO<>(State.Fail_Expired, "Token expired", response.getBody());
+                }
+                return new ChangeDTO<>(State.Fail, "Unable to send redeem request", response.getBody());
+            }
+            if(response.getBody() == null || response.getBody().get("key") == null)
+                return new ChangeDTO<>(State.Fail, "Unable to parse redeem token response", response.getBody());
+            Integer res = (Integer)(((Map)response.getBody().get("key")).get("user_id"));
+            MultiValueMap<String, String> sso_reset_password_body = new LinkedMultiValueMap<>();
+            sso_reset_password_body.add("X-User-Id", res.toString());
+            sso_reset_password_body.add("New-Password", password);
+            var response_sso = integrationRequest.sendPostRequestIntegration("v1/accounts/change-password-sso", sso_reset_password_body);
+            if (response_sso.getStatusCode() != HttpStatus.NO_CONTENT) {
+                return new ChangeDTO<>(State.Fail, "Unable to update password", response_sso.getBody());
+            }
+            return new ChangeDTO<>(State.OK, "Password successfully updated", response_sso.getBody());
+        }
+        catch (RestClientException e) {
+            return new ChangeDTO<>(State.Fail, "Unable to connect to server, error: " + e.getMessage(), null);
+        }
+        catch (Exception e) {
+            return new ChangeDTO<>(State.Fail, "Service error: " + e.getMessage(), null);
+        }
     }
 }

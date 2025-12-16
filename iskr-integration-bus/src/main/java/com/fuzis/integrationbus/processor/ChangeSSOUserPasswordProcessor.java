@@ -1,7 +1,6 @@
 package com.fuzis.integrationbus.processor;
 
 import com.fuzis.integrationbus.configuration.SSOConfiguration;
-import com.fuzis.integrationbus.exception.AuthenticationException;
 import com.fuzis.integrationbus.exception.ServiceFall;
 import com.fuzis.integrationbus.util.ProcessorUtils;
 import org.apache.camel.CamelContext;
@@ -13,13 +12,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
 @Component
-public class ChangeSSOUserDataProcessor implements Processor {
-    private static final Logger log = LoggerFactory.getLogger(ChangeSSOUserDataProcessor.class);
+public class ChangeSSOUserPasswordProcessor implements Processor {
+    private static final Logger log = LoggerFactory.getLogger(ChangeSSOUserPasswordProcessor.class);
 
     private final SSOConfiguration ssoConfiguration;
 
@@ -30,7 +28,7 @@ public class ChangeSSOUserDataProcessor implements Processor {
     private final AdminTokenProcessor adminTokenProcessor;
 
     @Autowired
-    public ChangeSSOUserDataProcessor(SSOConfiguration ssoConfiguration, CamelContext camelContext, ProcessorUtils processorUtils, AdminTokenProcessor adminTokenProcessor) {
+    public ChangeSSOUserPasswordProcessor(SSOConfiguration ssoConfiguration, CamelContext camelContext, ProcessorUtils processorUtils, AdminTokenProcessor adminTokenProcessor) {
         this.ssoConfiguration = ssoConfiguration;
         this.producerTemplate = camelContext.createProducerTemplate();
         this.processorUtils =  processorUtils;
@@ -41,22 +39,11 @@ public class ChangeSSOUserDataProcessor implements Processor {
     public void process(Exchange exchange) throws Exception {
         this.adminTokenProcessor.process(exchange);
         String httpEndpoint = ssoConfiguration.getKeycloakUrl() + "/admin/realms/" + ssoConfiguration.getRealm() + "/users/"+
-                exchange.getIn().getHeader("X-User-SSO-ID", String.class)+"?throwExceptionOnFailure=false";
+                exchange.getIn().getHeader("X-User-SSO-ID", String.class)+"/reset-password?throwExceptionOnFailure=false";
         Map<String, Object> body = new HashMap<>();
-        if(exchange.getIn().getHeader("New-Nickname") != null){
-            body.put("lastName", exchange.getIn().getHeader("New-Nickname",  String.class));
-        }
-        if(exchange.getIn().getHeader("New-Username") != null){
-            body.put("username", exchange.getIn().getHeader("New-Username",  String.class));
-        }
-        if(exchange.getIn().getHeader("Email-Verified") != null){
-            body.put("emailVerified", exchange.getIn().getHeader("Email-Verified",  String.class));
-            body.put("requiredActions", new ArrayList<>());
-        }
-        if(exchange.getIn().getHeader("New-Email") != null){
-            body.put("email", exchange.getIn().getHeader("New-Email",  String.class));
-            body.put("emailVerified", "false");
-        }
+        body.put("type", "password");
+        body.put("value", exchange.getIn().getHeader("New-Password",  String.class));
+        body.put("temporary", "false");
         Integer return_code = this.processorUtils.ssoRequest(producerTemplate,exchange,httpEndpoint, body,Map.of(
                 "Authorization", "Bearer "+exchange.getIn().getHeader("X-Tech-Token"),
                 Exchange.HTTP_METHOD, "PUT"

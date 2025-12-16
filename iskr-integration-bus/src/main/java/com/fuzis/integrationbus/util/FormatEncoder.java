@@ -12,13 +12,13 @@ import java.util.stream.Collectors;
 
 @Component
 public class FormatEncoder {
-    public String encodeMapUrlEncoded(Map<String, String> map) {
+    public String encodeMapUrlEncoded(Map<String, Object> map) {
         return map.entrySet()
                 .stream()
                 .map(entry ->
                         URLEncoder.encode(entry.getKey(), StandardCharsets.UTF_8)
                         + "=" +
-                        URLEncoder.encode(entry.getValue(), StandardCharsets.UTF_8))
+                        URLEncoder.encode(entry.getValue().toString(), StandardCharsets.UTF_8))
                 .collect(Collectors.joining("&"));
     }
 

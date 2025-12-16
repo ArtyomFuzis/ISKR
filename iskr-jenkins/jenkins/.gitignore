@@ -34,3 +34,4 @@ jenkins.install.UpgradeWizard.state
 jenkins.security.apitoken.ApiTokenPropertyConfiguration.xml
 config.xml
 !jobs/**/config.xml
+failed-boot-attempts.txt

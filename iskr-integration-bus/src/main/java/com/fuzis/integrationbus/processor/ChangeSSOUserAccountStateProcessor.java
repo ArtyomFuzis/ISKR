@@ -1,7 +1,6 @@
 package com.fuzis.integrationbus.processor;
 
 import com.fuzis.integrationbus.configuration.SSOConfiguration;
-import com.fuzis.integrationbus.exception.AuthenticationException;
 import com.fuzis.integrationbus.exception.ServiceFall;
 import com.fuzis.integrationbus.util.ProcessorUtils;
 import org.apache.camel.CamelContext;
@@ -15,11 +14,12 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Component
-public class ChangeSSOUserDataProcessor implements Processor {
-    private static final Logger log = LoggerFactory.getLogger(ChangeSSOUserDataProcessor.class);
+public class ChangeSSOUserAccountStateProcessor implements Processor {
+    private static final Logger log = LoggerFactory.getLogger(ChangeSSOUserAccountStateProcessor.class);
 
     private final SSOConfiguration ssoConfiguration;
 
@@ -30,7 +30,7 @@ public class ChangeSSOUserDataProcessor implements Processor {
     private final AdminTokenProcessor adminTokenProcessor;
 
     @Autowired
-    public ChangeSSOUserDataProcessor(SSOConfiguration ssoConfiguration, CamelContext camelContext, ProcessorUtils processorUtils, AdminTokenProcessor adminTokenProcessor) {
+    public ChangeSSOUserAccountStateProcessor(SSOConfiguration ssoConfiguration, CamelContext camelContext, ProcessorUtils processorUtils, AdminTokenProcessor adminTokenProcessor) {
         this.ssoConfiguration = ssoConfiguration;
         this.producerTemplate = camelContext.createProducerTemplate();
         this.processorUtils =  processorUtils;
@@ -43,20 +43,10 @@ public class ChangeSSOUserDataProcessor implements Processor {
         String httpEndpoint = ssoConfiguration.getKeycloakUrl() + "/admin/realms/" + ssoConfiguration.getRealm() + "/users/"+
                 exchange.getIn().getHeader("X-User-SSO-ID", String.class)+"?throwExceptionOnFailure=false";
         Map<String, Object> body = new HashMap<>();
-        if(exchange.getIn().getHeader("New-Nickname") != null){
-            body.put("lastName", exchange.getIn().getHeader("New-Nickname",  String.class));
+        if(exchange.getIn().getHeader("X-Account-Banned") != null &&  exchange.getIn().getHeader("X-Account-Banned").equals("true")){
+            body.put("requiredActions", List.of("CONFIGURE_TOTP"));
         }
-        if(exchange.getIn().getHeader("New-Username") != null){
-            body.put("username", exchange.getIn().getHeader("New-Username",  String.class));
-        }
-        if(exchange.getIn().getHeader("Email-Verified") != null){
-            body.put("emailVerified", exchange.getIn().getHeader("Email-Verified",  String.class));
-            body.put("requiredActions", new ArrayList<>());
-        }
-        if(exchange.getIn().getHeader("New-Email") != null){
-            body.put("email", exchange.getIn().getHeader("New-Email",  String.class));
-            body.put("emailVerified", "false");
-        }
+        else body.put("requiredActions", new ArrayList<>());
         Integer return_code = this.processorUtils.ssoRequest(producerTemplate,exchange,httpEndpoint, body,Map.of(
                 "Authorization", "Bearer "+exchange.getIn().getHeader("X-Tech-Token"),
                 Exchange.HTTP_METHOD, "PUT"
