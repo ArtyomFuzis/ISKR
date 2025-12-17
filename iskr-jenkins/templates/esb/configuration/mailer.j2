@@ -1,12 +1,4 @@
 spring:
-  datasource:
-    url: {{jdbc_string}}?currentSchema=accounts
-    driver-class-name: {{jdbc_driver}}
-  jpa:
-    show-sql: {{show_sql}}
-    properties:
-      hibernate:
-        dialect: {{jdbc_dialect}}
   rabbitmq: 
     host: {{rabbitmq_host}}
     port: {{rabbitmq_port}}
@@ -29,7 +21,7 @@ logging:
     root: {{log_level}}
 
 rabbitmq:
-  messaging_exchange: {{rabbit_messaging_exchange}}
+  messaging_queue: {{rabbit_messaging_queue_email}}
 
 integration:
   host: {{integration_host}}
