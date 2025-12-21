@@ -1,0 +1,93 @@
+events {
+    worker_connections 1024;
+}
+
+http {
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+
+    # Конфигурация upstream для сервисов
+    include /etc/nginx/conf.d/upstreams.conf;
+
+    # Log формат
+    log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+                    '$status $body_bytes_sent "$http_referer" '
+                    '"$http_user_agent" "$http_x_forwarded_for"';
+
+    access_log /var/log/nginx/access.log main;
+    error_log /var/log/nginx/error.log warn;
+
+    # Основной сервер
+    server {
+        listen 80;
+        server_name localhost;
+
+        # Обработка статических изображений /images/имя_файла
+        location ~ ^/images/(?<image_name>[^/]+)$ {
+            # Убираем расширение из имени файла
+            set $image_base $image_name;
+            if ($image_name ~ ^(.+)\.(png|jpg|jpeg|gif|webp)$) {
+                set $image_base $1;
+            }
+            
+            # Ищем файл с разными расширениями
+            root /var/www;
+            try_files /$image_base.png /$image_base.jpg /$image_base.jpeg /$image_base.gif /$image_base.webp =404;
+            
+            # Заголовки для кэширования изображений
+            expires 30d;
+            add_header Cache-Control "public, immutable";
+            
+            # Безопасность
+            add_header X-Content-Type-Options nosniff;
+        }
+
+        # Маршрутизация /oapi/v1/images/upload -> /api/v1/images/upload
+        location ~ ^/oapi/v1/images/upload(/.*)?$ {
+            # Прокси на ImageService
+            proxy_pass http://imageservice_backend/api/v1/images/upload$1$is_args$args;
+            
+            # Заголовки
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            
+            # Таймауты
+            proxy_connect_timeout 30s;
+            proxy_send_timeout 60s;
+            proxy_read_timeout 60s;
+        }
+
+        # Маршрутизация для /oapi/ на IntegrationBus
+        location /oapi/ {
+            # Прокси на IntegrationBus
+            proxy_pass http://integrationbus_backend/oapi/;
+            
+            # Заголовки
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            
+            # Таймауты
+            proxy_connect_timeout 30s;
+            proxy_send_timeout 60s;
+            proxy_read_timeout 60s;
+        }
+
+        # Health check endpoint
+        location /health {
+            access_log off;
+            return 200 "healthy\n";
+            add_header Content-Type text/plain;
+        }
+
+        # Запрещаем доступ к скрытым файлам
+        location ~ /\. {
+            deny all;
+            access_log off;
+            log_not_found off;
+        }
+    }
+}

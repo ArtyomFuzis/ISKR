@@ -25,7 +25,7 @@ public class ImageController {
     @PostMapping("/upload")
     public ResponseEntity<ChangeDTO<ImageLink>> uploadImage(
             @RequestParam("file") MultipartFile file,
-            @RequestParam("X-User-Id") Integer uploaderId) {
+            @RequestParam(value = "X-User-Id", required = false) Integer uploaderId) {
         return httpUtil.handleServiceResponse(imageService.uploadImage(file, uploaderId));
     }
 }

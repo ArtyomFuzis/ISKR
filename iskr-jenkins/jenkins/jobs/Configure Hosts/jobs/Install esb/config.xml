@@ -208,6 +208,22 @@
 				}
 			}
 		}
+		stage(&quot;Install nginx&quot;) {
+			when {
+				expression { params.INSTALL_NGINX }
+			}
+			steps {
+				script {
+					 withCredentials([string(credentialsId: &apos;ansible-vault-password&apos;, variable: &apos;VAULT_PASS&apos;)]) {
+					  sh &quot;&quot;&quot;
+						${env.PREPARE_CMD} &amp;&amp; \
+						${env.ANSIBLE_EXEC_PLAYBOOK} ${env.BASE_ANSIBLE_PARAMS} ./esb/deploy-nginx.yml \
+						${params.ANSIBLE_EXTRA_KEYS} --vault-password-file &lt;(echo &quot;$VAULT_PASS&quot;)
+						&quot;&quot;&quot;
+					 }
+				}
+			}
+		}
 		
 		
 	}

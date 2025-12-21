@@ -1,0 +1,47 @@
+---
+  - name: Deploy nginx esb
+    hosts: deploy_esb_nginx
+    tasks: 
+      - name: Give access to socket for install user
+        file: 
+          path: "/var/run/docker.sock"
+          state: file 
+          owner: "{{ansible_user}}"
+        become: yes
+      
+      - name: Down app 
+        shell: "cd {{base_path}}/docker/ && docker compose -f esb_nginx.yml down"
+        ignore_errors: yes
+
+      - name: Ensure that dir 'nginx' exists
+        file: 
+          path: "{{base_path}}/docker/nginx"
+          state: directory
+
+      - name: Ensure that dir 'conf.d' exists
+        file: 
+          path: "{{base_path}}/docker/nginx/conf.d"
+          state: directory
+
+      - name: Copy nginx.conf template
+        template: 
+          src: "/workspace/templates/esb/configuration/nginx.j2"
+          dest: "{{base_path}}/docker/nginx/nginx.conf"
+      
+      - name: Copy upstreams.conf template
+        copy: 
+          src: "/workspace/templates/esb/configuration/nginx_template.j2"
+          dest: "{{base_path}}/docker/nginx/conf.d/upstreams.conf"
+        
+      - name: Copy docker template 
+        template: 
+          src: "/workspace/templates/esb/nginx.j2"
+          dest: "{{base_path}}/docker/esb_nginx.yml"
+      
+      - name: Pull image 
+        shell: "cd {{base_path}}/docker/ && docker compose -f esb_nginx.yml pull"
+      
+      - name: Start nginx
+        shell: |
+          cd {{base_path}}/docker/ && \
+          docker compose -f esb_nginx.yml up -d
