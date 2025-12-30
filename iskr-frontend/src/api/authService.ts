@@ -103,6 +103,23 @@ export interface ResetPasswordConfirmData {
   Password: string;
 }
 
+export interface RedeemTokenData {
+  Token: string;
+}
+
+export interface RedeemTokenResponse {
+  data: {
+    state: string;
+    message: string;
+    key: any;
+  };
+  meta: {
+    processedBy: string;
+    timestamp: string;
+    userId: string;
+  };
+}
+
 export const authAPI = {
   login: async (credentials: LoginData): Promise<{ user: UserData; token: string }> => {
     const params = toFormUrlEncoded(credentials);
@@ -117,7 +134,6 @@ export const authAPI = {
   },
 
   register: async (userData: RegisterData): Promise<RegisterResponse> => {
-    // Правильные параметры для регистрации
     const registrationData = {
       Nickname: userData.Nickname,
       Email: userData.Email,
@@ -126,7 +142,7 @@ export const authAPI = {
     };
     
     const params = toFormUrlEncoded(registrationData);
-    const response = await api.post('/v1/accounts/user', params); // Прямой endpoint
+    const response = await api.post(API_ENDPOINTS.REGISTER_USER, params);
     return response.data;
   },
 
@@ -176,6 +192,12 @@ export const authAPI = {
   resetPasswordConfirm: async (data: ResetPasswordConfirmData): Promise<ResetPasswordResponse> => {
     const params = toFormUrlEncoded(data);
     const response = await api.post(API_ENDPOINTS.RESET_PASSWORD_CONFIRM, params);
+    return response.data;
+  },
+
+  redeemToken: async (data: RedeemTokenData): Promise<RedeemTokenResponse> => {
+    const params = toFormUrlEncoded(data);
+    const response = await api.post(API_ENDPOINTS.REDEEM_TOKEN, params);
     return response.data;
   },
 

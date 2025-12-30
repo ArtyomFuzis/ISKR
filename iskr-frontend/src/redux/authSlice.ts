@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk, type PayloadAction } from '@reduxjs/toolkit';
-import { authAPI, type LoginData, type RegisterData, type UserData, type ResetPasswordConfirmData, type RegisterResponse } from '../api/authService';
+import { authAPI, type LoginData, type RegisterData, type UserData, type ResetPasswordConfirmData, type RegisterResponse, type RedeemTokenData } from '../api/authService';
 import { API_STATES, ERROR_STATUSES } from '../constants/api';
 
 export interface User extends UserData {
@@ -19,6 +19,7 @@ interface AuthState {
   isLoading: boolean;
   error: string | null;
   registrationSuccess: boolean;
+  emailVerificationSuccess: boolean; // Новое поле для успешной верификации email
 }
 
 // Безопасная функция для получения данных из localStorage
@@ -47,6 +48,7 @@ const initialState: AuthState = {
   isLoading: false,
   error: null,
   registrationSuccess: false,
+  emailVerificationSuccess: false,
 };
 
 // Асинхронные thunk'и для работы с API
@@ -158,6 +160,37 @@ export const resetPasswordConfirm = createAsyncThunk(
   }
 );
 
+// Добавляем thunk для подтверждения email по токену
+export const redeemToken = createAsyncThunk(
+  'auth/redeemToken',
+  async (data: RedeemTokenData, { rejectWithValue }) => {
+    try {
+      const response = await authAPI.redeemToken(data);
+      
+      // Проверяем статус ответа
+      if (response.data.state === API_STATES.OK) {
+        return response;
+      } else if (response.data.state === API_STATES.FAIL_NOT_FOUND) {
+        return rejectWithValue('Недействительная ссылка для подтверждения email');
+      } else {
+        return rejectWithValue(response.data.message || 'Ошибка при подтверждении email');
+      }
+    } catch (error: any) {
+      let errorMessage = error.response?.data?.data?.message || 
+                        error.response?.data?.message || 
+                        error.message || 
+                        'Ошибка при подтверждении email';
+      
+      // Обработка 404 ошибки
+      if (error.response?.status === 404) {
+        errorMessage = 'Недействительная ссылка для подтверждения email';
+      }
+      
+      return rejectWithValue(errorMessage);
+    }
+  }
+);
+
 // Добавляем thunk для проверки авторизации
 export const checkAuth = createAsyncThunk(
   'auth/checkAuth',
@@ -187,6 +220,7 @@ const authSlice = createSlice({
       state.user = null;
       state.token = null;
       state.registrationSuccess = false;
+      state.emailVerificationSuccess = false;
       localStorage.removeItem('token');
       localStorage.removeItem('user');
     },
@@ -208,6 +242,9 @@ const authSlice = createSlice({
     },
     clearRegistrationSuccess: (state) => {
       state.registrationSuccess = false;
+    },
+    clearEmailVerificationSuccess: (state) => {
+      state.emailVerificationSuccess = false;
     },
   },
   extraReducers: (builder) => {
@@ -282,6 +319,23 @@ const authSlice = createSlice({
         state.error = action.payload as string;
       })
       
+      // Подтверждение email по токену
+      .addCase(redeemToken.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+        state.emailVerificationSuccess = false;
+      })
+      .addCase(redeemToken.fulfilled, (state) => {
+        state.isLoading = false;
+        state.emailVerificationSuccess = true;
+        state.error = null;
+      })
+      .addCase(redeemToken.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+        state.emailVerificationSuccess = false;
+      })
+      
       // Проверка авторизации
       .addCase(checkAuth.pending, (state) => {
         state.isLoading = true;
@@ -317,6 +371,6 @@ const authSlice = createSlice({
   },
 });
 
-export const { logout, setUsername, clearError, clearRegistrationSuccess } = authSlice.actions;
+export const { logout, setUsername, clearError, clearRegistrationSuccess, clearEmailVerificationSuccess } = authSlice.actions;
 
 export default authSlice.reducer;

@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
+import java.util.HashMap;
 import java.util.Map;
 
 @Slf4j
@@ -22,6 +23,9 @@ public class EmailService {
 
     @Value("${spring.mail.from}")
     private String emailFrom;
+
+    @Value("${website_domain}")
+    private String websiteDomain;
 
     @Autowired
     private JavaMailSender mailSender;
@@ -32,7 +36,7 @@ public class EmailService {
     public void sendEmail(EmailDTO emailDTO) {
         try {
             String templateName = getTemplateName(emailDTO.getType());
-            Map<String, Object> variables = extractVariables(emailDTO);
+            Map<String, Object> variables = prepareTemplateVariables(emailDTO);
 
             String subject = getSubject(emailDTO.getType());
             String htmlContent = generateHtmlContent(templateName, variables);
@@ -56,21 +60,46 @@ public class EmailService {
 
     private String getSubject(EmailType type) {
         return switch (type) {
-            case VerifyEmailEmail -> "Подтвердите свой email";
+            case VerifyEmailEmail -> "Подтверждение email адреса";
             case ResetPasswordTokenEmail -> "Сброс пароля";
             default -> "Уведомление";
         };
     }
 
-    @SuppressWarnings("unchecked")
-    private Map<String, Object> extractVariables(EmailDTO emailDTO) {
+    private Map<String, Object> prepareTemplateVariables(EmailDTO emailDTO) {
+        Map<String, Object> variables = new HashMap<>();
+        String token = extractToken(emailDTO);
+
+        if (token != null) {
+            String url = buildUrl(emailDTO.getType(), token);
+            variables.put("token", token);
+            variables.put("url", url);
+        }
+
+        // Добавляем дополнительные переменные из content если они есть
         if (emailDTO.getContent() instanceof Map) {
-            return (Map<String, Object>) emailDTO.getContent();
+            variables.putAll((Map<? extends String, ?>) emailDTO.getContent());
         }
+
+        return variables;
+    }
+
+    private String extractToken(EmailDTO emailDTO) {
         if (emailDTO.getContent() instanceof String) {
-            return Map.of("value", emailDTO.getContent());
+            return (String) emailDTO.getContent();
+        } else if (emailDTO.getContent() instanceof Map) {
+            Map<?, ?> contentMap = (Map<?, ?>) emailDTO.getContent();
+            return (String) contentMap.get("token");
         }
-        throw new IllegalArgumentException("Unknown type of content: " + emailDTO.getContent());
+        return null;
+    }
+
+    private String buildUrl(EmailType type, String token) {
+        return switch (type) {
+            case VerifyEmailEmail -> websiteDomain + "/validate-email/" + token;
+            case ResetPasswordTokenEmail -> websiteDomain + "/reset-password/" + token;
+            default -> "";
+        };
     }
 
     private String generateHtmlContent(String templateName, Map<String, Object> variables) {
@@ -82,7 +111,6 @@ public class EmailService {
     private void sendHtmlMessage(String to, String subject, String htmlContent) throws MessagingException {
         MimeMessage message = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-        log.warn("Sending email to: {}", to);
         helper.setTo(to);
         helper.setSubject(subject);
         helper.setText(htmlContent, true);

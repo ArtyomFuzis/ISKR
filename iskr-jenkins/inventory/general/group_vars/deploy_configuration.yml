@@ -34,4 +34,5 @@
   search_sync_enabled: true
   search_sync_batch: 1000
   search_sync_cron: "\"*/30 * * * * *\""
+  website_domain: "http://localhost:5000"
   

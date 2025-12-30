@@ -1,0 +1,57 @@
+@use '../../../_index.scss' as *;
+
+.validate-email-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 80vh;
+  padding: 2rem;
+
+  .validate-email-container {
+    display: flex;
+    flex-direction: column;
+    border: $pink 1px solid;
+    border-radius: 4px;
+    padding: 2rem 4rem;
+    width: 30vw;
+    background: $blues-gradient;
+    color: white;
+
+    .validate-email-title {
+      font-size: 2rem;
+      font-weight: normal;
+      margin-bottom: 1.5rem;
+      text-align: center;
+    }
+
+    .validate-email-loading,
+    .validate-email-success,
+    .validate-email-error {
+      text-align: center;
+      padding: 1rem 0;
+
+      .validate-email-description,
+      .validate-email-success-message,
+      .validate-email-error-message,
+      .validate-email-error-note {
+        font-size: 1rem;
+        color: white;
+        margin-bottom: 1.5rem;
+        line-height: 1.5;
+      }
+
+      .validate-email-error-message {
+        color: #ff4444;
+        font-weight: bold;
+        margin-bottom: 1rem;
+      }
+
+      .validate-email-error-note {
+        font-size: 0.875rem;
+        color: $pink;
+        font-style: italic;
+        margin-bottom: 1.5rem;
+      }
+    }
+  }
+}

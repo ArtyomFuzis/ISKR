@@ -4,12 +4,13 @@ export const OAPI_BASE_URL = '/oapi'; // Проксируется через Vit
 // Endpoints
 export const API_ENDPOINTS = {
   LOGIN: '/v1/accounts/login',
-  REGISTER_USER: '/v1/accounts/user', // Новый endpoint для регистрации
+  REGISTER_USER: '/v1/accounts/user',
   LOGOUT: '/v1/accounts/logout',
   GET_CURRENT_USER: '/v1/accounts/user',
   GET_USER_PROFILE: '/v1/accounts/profile',
   RESET_PASSWORD: '/v1/accounts/reset-password',
   RESET_PASSWORD_CONFIRM: '/v1/accounts/reset-password-confirm',
+  REDEEM_TOKEN: '/v1/accounts/redeem-token', // Новый endpoint для подтверждения email
 } as const;
 
 // Ключи для localStorage
@@ -29,7 +30,7 @@ export const ERROR_STATUSES = {
   UNAUTHORIZED: 401,
   FORBIDDEN: 403,
   NOT_FOUND: 404,
-  CONFLICT: 409, // Добавляем для конфликтов
+  CONFLICT: 409,
   INTERNAL_SERVER_ERROR: 500,
 } as const;
 
@@ -44,6 +45,6 @@ export const API_STATES = {
   OK: 'OK',
   FAIL_NOT_FOUND: 'Fail_NotFound',
   FAIL_EXPIRED: 'Fail_Expired',
-  FAIL_CONFLICT: 'Fail_Conflict', // Добавляем для конфликтов
+  FAIL_CONFLICT: 'Fail_Conflict',
   FAIL: 'Fail',
 } as const;

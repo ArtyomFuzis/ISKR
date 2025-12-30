@@ -14,7 +14,7 @@ import Account from "./components/pages/account/Account.tsx";
 import Followers from "./components/pages/followers/Followers.tsx";
 import Subscriptions from "./components/pages/subscriptions/Subscriptions.tsx";
 import ResetPasswordPage from "./components/pages/reset-password/ResetPasswordPage.tsx";
-import { useEffect } from 'react';
+import ValidateEmailPage from "./components/pages/validate-email/ValidateEmailPage.tsx"; // Новый импорт
 
 // Компонент-обертка для передачи состояния в Header
 function AppWrapper() {
@@ -40,6 +40,7 @@ function AppWrapper() {
         <Route path="/followers" element={<Followers />} />
         <Route path="/subscriptions" element={<Subscriptions />} />
         <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+        <Route path="/validate-email/:token" element={<ValidateEmailPage />} /> {/* Новый маршрут */}
       </Routes>
     </>
   );

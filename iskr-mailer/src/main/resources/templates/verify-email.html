@@ -3,57 +3,180 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Email Verification</title>
+    <title>Подтверждение email</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,100..900;1,100..900&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Jost', sans-serif;
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
+            background: linear-gradient(90deg, #16213E, #1A1A2E);
+            margin: 0;
+            padding: 40px 20px;
+            min-height: 100vh;
+        }
+
+        /* Центрирующий контейнер для email-клиентов */
+        .email-wrapper {
+            width: 100%;
             max-width: 600px;
             margin: 0 auto;
-            padding: 20px;
         }
-        .header {
-            background-color: #4CAF50;
+
+        .email-container {
+            width: 100%;
+            border: 1px solid #E94560;
+            border-radius: 4px;
+            background: linear-gradient(90deg, #1A1A2E, #16213E);
             color: white;
-            padding: 20px;
+            overflow: hidden;
+        }
+
+        .email-header {
+            padding: 2rem 4rem;
+            border-bottom: 1px solid rgba(233, 69, 96, 0.3);
             text-align: center;
-            border-radius: 5px 5px 0 0;
         }
-        .content {
-            padding: 30px;
-            background-color: #f9f9f9;
-            border-radius: 0 0 5px 5px;
+
+        .email-title {
+            font-size: 2rem;
+            font-weight: normal;
+            color: white;
         }
-        .button {
+
+        .email-content {
+            padding: 2rem 4rem;
+        }
+
+        .email-message {
+            font-size: 1rem;
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .email-button {
             display: inline-block;
-            padding: 12px 24px;
-            background-color: #4CAF50;
+            padding: 12px 32px;
+            background-color: #E94560;
             color: white;
             text-decoration: none;
             border-radius: 4px;
-            margin: 20px 0;
+            font-size: 1rem;
+            text-align: center;
+            margin: 1rem 0;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
         }
-        .footer {
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #ddd;
-            font-size: 12px;
-            color: #777;
+
+        .email-button:hover {
+            background-color: #ff2e63;
+        }
+
+        .email-note {
+            font-size: 0.875rem;
+            color: #E94560;
+            margin-top: 1.5rem;
+            line-height: 1.5;
+            font-style: italic;
+            border-top: 1px solid rgba(233, 69, 96, 0.3);
+            padding-top: 1rem;
+        }
+
+        .email-footer {
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid rgba(233, 69, 96, 0.3);
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        /* Альтернатива для email-клиентов с плохой поддержкой CSS */
+        @media only screen and (max-width: 600px) {
+            body {
+                padding: 20px 10px;
+            }
+
+            .email-header,
+            .email-content {
+                padding: 1.5rem;
+            }
+
+            .email-title {
+                font-size: 1.5rem;
+            }
+        }
+
+        /* Для старых email-клиентов используем табличную верстку */
+        .email-table {
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+            border-collapse: collapse;
         }
     </style>
 </head>
 <body>
-<div class="header">
-    <h1>Подтвердите ваш новый адрес электронной почты</h1>
-</div>
+<!-- Табличная верстка для максимальной совместимости с email-клиентами -->
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background: linear-gradient(90deg, #16213E, #1A1A2E); min-height: 100vh;">
+    <tr>
+        <td align="center" valign="top" style="padding: 40px 20px;">
+            <table class="email-table" cellpadding="0" cellspacing="0" border="0" width="600" style="max-width: 600px; width: 100%; border: 1px solid #E94560; border-radius: 4px; background: linear-gradient(90deg, #1A1A2E, #16213E); overflow: hidden;">
+                <!-- Заголовок -->
+                <tr>
+                    <td style="padding: 2rem 4rem; border-bottom: 1px solid rgba(233, 69, 96, 0.3); text-align: center;">
+                        <h1 style="font-size: 2rem; font-weight: normal; color: white; margin: 0; font-family: 'Jost', sans-serif;">
+                            Подтверждение email адреса
+                        </h1>
+                    </td>
+                </tr>
 
-<div class="content">
+                <!-- Контент -->
+                <tr>
+                    <td style="padding: 2rem 4rem;">
+                        <p style="font-size: 1rem; line-height: 1.6; margin-bottom: 1.5rem; color: rgba(255, 255, 255, 0.9); font-family: 'Jost', sans-serif;">
+                            Для разблокировки вашего аккаунта,
+                            пожалуйста, подтвердите ваш email адрес, нажав на кнопку ниже:
+                        </p>
 
-    <div style="text-align: center;">
-        Ваш токен подтверждения почтового адреса: <span th:text="${value}"></span>
-    </div>
-</div>
+                        <div style="text-align: center; margin: 1rem 0;">
+                            <a th:href="${url}"
+                               style="display: inline-block; padding: 12px 32px; background-color: #E94560; color: white; text-decoration: none; border-radius: 4px; font-size: 1rem; font-family: 'Jost', sans-serif;">
+                                Подтвердить email
+                            </a>
+                        </div>
 
+                        <p style="font-size: 1rem; line-height: 1.6; margin-bottom: 1.5rem; color: rgba(255, 255, 255, 0.9); font-family: 'Jost', sans-serif;">
+                            Если вы не регистрировались на нашем сайте, просто проигнорируйте это письмо.
+                        </p>
+
+                        <div style="font-size: 0.875rem; color: #E94560; margin-top: 1.5rem; line-height: 1.5; font-style: italic; border-top: 1px solid rgba(233, 69, 96, 0.3); padding-top: 1rem;">
+                            <p style="margin: 0 0 0.5rem 0;">Ссылка действительна в течение 24 часов.</p>
+                            <p style="margin: 0 0 0.5rem 0;">Если кнопка выше не работает, скопируйте и вставьте следующую ссылку в браузер:</p>
+                            <p style="word-break: break-all; color: rgba(255, 255, 255, 0.8); font-size: 0.75rem; margin-top: 0.5rem;">
+                                <a th:href="${url}" th:text="${url}" style="color: #E94560; text-decoration: none;">[[${url}]]</a>
+                            </p>
+                        </div>
+
+                        <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgba(233, 69, 96, 0.3); font-size: 0.75rem; color: rgba(255, 255, 255, 0.6);">
+                            <p style="margin: 0 0 0.5rem 0;">Это автоматическое письмо, пожалуйста, не отвечайте на него.</p>
+                            <p style="margin: 0;">После подтверждения email вы сможете войти в свой аккаунт.</p>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>
 </body>
 </html>
