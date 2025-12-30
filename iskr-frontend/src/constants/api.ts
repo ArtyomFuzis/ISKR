@@ -1,5 +1,6 @@
 // Базовые URL для API
 export const OAPI_BASE_URL = '/oapi'; // Проксируется через Vite
+export const IMAGES_BASE_URL = '/images'; // Базовый URL для изображений
 
 // Endpoints
 export const API_ENDPOINTS = {
@@ -10,7 +11,10 @@ export const API_ENDPOINTS = {
   GET_USER_PROFILE: '/v1/accounts/profile',
   RESET_PASSWORD: '/v1/accounts/reset-password',
   RESET_PASSWORD_CONFIRM: '/v1/accounts/reset-password-confirm',
-  REDEEM_TOKEN: '/v1/accounts/redeem-token', // Новый endpoint для подтверждения email
+  REDEEM_TOKEN: '/v1/accounts/redeem-token',
+  POPULAR_USERS: '/v1/popular/users',
+  POPULAR_BOOKS: '/v1/popular/books',
+  POPULAR_COLLECTIONS: '/v1/popular/collections',
 } as const;
 
 // Ключи для localStorage

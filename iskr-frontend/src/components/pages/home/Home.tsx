@@ -41,15 +41,19 @@ import Avatar11 from '../../../assets/images/users/avatar11.jpg';
 import Avatar12 from '../../../assets/images/users/avatar12.jpg';
 import HorizontalSlider from "../../controls/horizontal-slider/HorizontalSlider.tsx";
 import SearchFilters from "../../controls/search-filters/SearchFilters.tsx";
-import {useState} from "react";
+import { useEffect, useState } from "react";
 import Stars from "../../stars/Stars.tsx";
 import Delete from '../../../assets/elements/delete.svg';
-import {russianLocalWordConverter} from "../../../utils/russianLocalWordConverter.ts";
+import { russianLocalWordConverter } from "../../../utils/russianLocalWordConverter.ts";
 import Login from "../../controls/login/Login.tsx";
 import Modal from "../../controls/modal/Modal.tsx";
-import type {RootState} from "../../../redux/store.ts";
-import {useSelector} from "react-redux";
-import {useNavigate} from "react-router-dom";
+import type { RootState } from "../../../redux/store.ts";
+import { useSelector, useDispatch } from "react-redux";
+import { useNavigate } from "react-router-dom";
+import { fetchAllPopular } from '../../../redux/popularSlice';
+import type { User, Book, Collection } from '../../../types/popular';
+import { getBookImageUrl, getUserImageUrl, getCollectionImageUrl, formatRating } from '../../../api/popularService';
+import PlaceholderImage from '../../../assets/images/placeholder.jpg'; // Убедитесь, что этот файл существует
 
 function Home() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -58,9 +62,18 @@ function Home() {
   const [isBookInWishlist, setIsBookInWishlist] = useState(false);
   const [isCollectionFavorited, setIsCollectionFavorited] = useState(false);
   const [userFollowStates, setUserFollowStates] = useState<Record<number, boolean>>({});
+  
   const isAuthenticated = useSelector((state: RootState) => state.auth.isAuthenticated);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  
+  const popular = useSelector((state: RootState) => state.popular);
+  const dispatch = useDispatch();
   const navigate = useNavigate();
+
+  // Загружаем популярный контент при монтировании компонента
+  useEffect(() => {
+    dispatch(fetchAllPopular(12));
+  }, [dispatch]);
 
   const handleTypeChange = (type: string) => {
     setSelectedTypes(prev =>
@@ -75,7 +88,8 @@ function Home() {
     setSelectedGenre('Все жанры');
   };
 
-  const topBooks = [
+  // Статические данные для поиска (оставляем как было, так как endpoint поиска еще нет)
+  const staticBooks = [
     { id: 1, title: "Три товарища", author: "Эрих Мария Ремарк", rating: 4.5, cover: TriTovarischaCover },
     { id: 2, title: "Мастер и Маргарита", author: "Михаил Булгаков", rating: 4.8, cover: MasterIMargheritaCover },
     { id: 3, title: "1984", author: "Джордж Оруэлл", rating: 4.6, cover: OrwellCover },
@@ -90,7 +104,7 @@ function Home() {
     { id: 12, title: "Над пропастью во ржи", author: "Джером Дэвид Сэлинджер", rating: 4.3, cover: NadPropastyuVoRzhiCover }
   ];
 
-  const topCollections = [
+  const staticCollections = [
     { id: 1, title: "Классика", creator: "ghost_67", booksCount: "30 книг", cover: ClassicCover },
     { id: 2, title: "Русская литература", creator: "book_lover", booksCount: "45 книг", cover: RussianLitCover },
     { id: 3, title: "Фантастика", creator: "sci_fi_fan", booksCount: "28 книг", cover: FantasticCover },
@@ -105,7 +119,7 @@ function Home() {
     { id: 12, title: "История", creator: "historian_", booksCount: "42 книги", cover: HistoryCover }
   ];
 
-  const topUsers = [
+  const staticUsers = [
     { id: 1, username: "ghost_67", followers: "12567", avatar: Avatar1 },
     { id: 2, username: "book_lover", followers: "8234", avatar: Avatar2 },
     { id: 3, username: "reader_pro", followers: "15890", avatar: Avatar3 },
@@ -120,20 +134,77 @@ function Home() {
     { id: 12, username: "genre_guru", followers: "12345", avatar: Avatar12 }
   ];
 
+  // Преобразование данных из API в формат для компонентов - КНИГИ
+  const topBooks = popular.books.map((book: Book) => {
+    // Формируем описание книги: автор отсутствует, используем подзаголовок или коллекции
+    let description = '';
+    if (book.subtitle) {
+      description = book.subtitle;
+    } else if (book.collectionsCount > 0) {
+      description = `В ${book.collectionsCount} ${russianLocalWordConverter(
+        book.collectionsCount,
+        'коллекции',
+        'коллекциях',
+        'коллекциях',
+        'коллекциях'
+      )}`;
+    } else {
+      description = 'Нет описания';
+    }
+
+    return {
+      id: book.bookId,
+      title: book.title,
+      description: description,
+      rating: formatRating(book.averageRating), // Преобразуем рейтинг в 5-балльную шкалу
+      cover: getBookImageUrl(book) || PlaceholderImage,
+      originalBook: book, // Сохраняем оригинальный объект для навигации
+    };
+  });
+
+  // Преобразование данных из API в формат для компонентов - КОЛЛЕКЦИИ
+  const topCollections = popular.collections.map((collection: Collection) => {
+    return {
+      id: collection.collectionId,
+      title: collection.title,
+      description: collection.ownerNickname,
+      booksCount: `${collection.bookCount} ${russianLocalWordConverter(
+        collection.bookCount,
+        'книга',
+        'книги',
+        'книг',
+        'книг'
+      )}`,
+      cover: getCollectionImageUrl(collection) || PlaceholderImage,
+      originalCollection: collection,
+    };
+  });
+
+  // Преобразование данных из API в формат для компонентов - ПОЛЬЗОВАТЕЛИ
+  const topUsers = popular.users.map((user: User) => {
+    return {
+      id: user.userId,
+      username: user.username,
+      nickname: user.nickname,
+      followers: user.subscribersCount.toString(),
+      avatar: getUserImageUrl(user) || PlaceholderImage,
+    };
+  });
+
   const filterSearchResults = () => {
     const query = searchQuery.toLowerCase().trim();
     if (!query) return { books: [], users: [], collections: [] };
 
-    const filteredBooks = topBooks.filter(book => 
+    const filteredBooks = staticBooks.filter(book => 
       book.title.toLowerCase().includes(query) || 
       book.author.toLowerCase().includes(query)
     );
 
-    const filteredUsers = topUsers.filter(user => 
+    const filteredUsers = staticUsers.filter(user => 
       user.username.toLowerCase().includes(query)
     );
 
-    const filteredCollections = topCollections.filter(collection => 
+    const filteredCollections = staticCollections.filter(collection => 
       collection.title.toLowerCase().includes(query) || 
       collection.creator.toLowerCase().includes(query)
     );
@@ -171,15 +242,18 @@ function Home() {
     action();
   };
 
+  // Обработчики кликов для API данных
   const handleBookClick = (book: typeof topBooks[0]) => {
     navigate('/book', {
       state: {
+        id: book.id.toString(),
         title: book.title,
-        author: book.author,
+        description: book.description,
         coverUrl: book.cover,
-        genre: 'Детектив',
-        year: '1939',
-        rating: book.rating
+        rating: book.rating,
+        isMine: false,
+        isEditMode: false,
+        originalData: book.originalBook,
       }
     });
   };
@@ -187,20 +261,24 @@ function Home() {
   const handleCollectionClick = (collection: typeof topCollections[0]) => () => {
     navigate('/collection', {
       state: {
-        id: collection.title.toLowerCase().replace(/\s/g, '-'),
+        id: collection.id.toString(),
         name: collection.title,
+        description: collection.originalCollection.description,
         isMine: false,
         coverUrl: collection.cover,
+        owner: collection.description,
+        booksCount: collection.originalCollection.bookCount,
+        likesCount: collection.originalCollection.likesCount,
         books: topBooks.slice(0, 5).map(book => ({
-          id: book.title.toLowerCase().replace(/\s/g, '-'),
+          id: book.id.toString(),
           title: book.title,
-          author: book.author,
+          description: book.description,
           rating: book.rating,
           imageUrl: book.cover
         }))
       }
     });
-  }
+  };
 
   const handleUserClick = (user: typeof topUsers[0]) => {
     navigate('/profile', {
@@ -212,7 +290,8 @@ function Home() {
     });
   };
 
-  const handleSearchBookClick = (book: typeof topBooks[0]) => {
+  // Обработчики кликов для статических данных (поиск)
+  const handleSearchBookClick = (book: typeof staticBooks[0]) => {
     navigate('/book', {
       state: {
         id: book.id.toString(),
@@ -226,7 +305,7 @@ function Home() {
     });
   };
 
-  const handleSearchUserClick = (user: typeof topUsers[0]) => {
+  const handleSearchUserClick = (user: typeof staticUsers[0]) => {
     navigate('/profile', {
       state: {
         username: user.username,
@@ -236,14 +315,14 @@ function Home() {
     });
   };
 
-  const handleSearchCollectionClick = (collection: typeof topCollections[0]) => {
+  const handleSearchCollectionClick = (collection: typeof staticCollections[0]) => {
     navigate('/collection', {
       state: {
         id: collection.id.toString(),
         name: collection.title,
         isMine: false,
         coverUrl: collection.cover,
-        books: topBooks.slice(0, 5).map(book => ({
+        books: staticBooks.slice(0, 5).map(book => ({
           id: book.id.toString(),
           title: book.title,
           author: book.author,
@@ -253,6 +332,20 @@ function Home() {
       }
     });
   };
+
+  // Функции для рендеринга состояния загрузки
+  const renderLoadingState = () => (
+    <div className="loading-state">
+      <div className="loading-spinner"></div>
+      <p>Загрузка...</p>
+    </div>
+  );
+
+  const renderErrorState = (error: string | null) => (
+    <div className="error-state">
+      <p>Ошибка загрузки: {error}</p>
+    </div>
+  );
 
   return (
     <main>
@@ -382,75 +475,111 @@ function Home() {
           </>
         )}
       </div>
+
+      {/* Топ книг */}
       <div className="top-container">
-        <h2>Топ-12 книг за неделю</h2>
-        <HorizontalSlider>
-          {topBooks.map((book) => (
-            <CardElement
-              key={book.id}
-              title={book.title}
-              description={book.author}
-              starsCount={book.rating}
-              imageUrl={book.cover}
-              button={true}
-              buttonLabel={"Добавить в вишлист"}
-              onClick={() => handleBookClick(book)}
-              buttonIconUrl={AddIcon}
-              buttonChanged={true}
-              buttonChangedIconUrl={Delete}
-              buttonChangedLabel={"Удалить из вишлиста"}
-              isAuthenticated={isAuthenticated}
-              onUnauthorized={() => setShowLoginModal(true)}
-            />
-          ))}
-        </HorizontalSlider>
+        <h2>Топ-12 книг сайта</h2>
+        {popular.loading.books ? (
+          renderLoadingState()
+        ) : popular.error.books ? (
+          renderErrorState(popular.error.books)
+        ) : topBooks.length > 0 ? (
+          <HorizontalSlider>
+            {topBooks.map((book) => (
+              <CardElement
+                key={book.id}
+                title={book.title}
+                description={book.description}
+                starsCount={book.rating}
+                imageUrl={book.cover}
+                button={true}
+                buttonLabel={"Добавить в вишлист"}
+                onClick={() => handleBookClick(book)}
+                buttonIconUrl={AddIcon}
+                buttonChanged={true}
+                buttonChangedIconUrl={Delete}
+                buttonChangedLabel={"Удалить из вишлиста"}
+                isAuthenticated={isAuthenticated}
+                onUnauthorized={() => setShowLoginModal(true)}
+              />
+            ))}
+          </HorizontalSlider>
+        ) : (
+          <p className="no-data-message">Пока нет данных о книгах</p>
+        )}
       </div>
+
+      {/* Топ коллекций */}
       <div className="top-container">
-        <h2>Топ-12 коллекций за неделю</h2>
-        <HorizontalSlider>
-          {topCollections.map((collection) => (
-            <CardElement
-              key={collection.id}
-              title={collection.title}
-              description={collection.creator}
-              infoDecoration={collection.booksCount}
-              imageUrl={collection.cover}
-              button={true}
-              onClick={handleCollectionClick(collection)}
-              buttonLabel={"Добавить в избранное"}
-              buttonIconUrl={AddIcon}
-              buttonChanged={true}
-              buttonChangedIconUrl={Delete}
-              buttonChangedLabel={"Удалить из избранного"}
-              isAuthenticated={isAuthenticated}
-              onUnauthorized={() => setShowLoginModal(true)}
-            />
-          ))}
-        </HorizontalSlider>
+        <h2>Топ-12 коллекций сайта</h2>
+        {popular.loading.collections ? (
+          renderLoadingState()
+        ) : popular.error.collections ? (
+          renderErrorState(popular.error.collections)
+        ) : topCollections.length > 0 ? (
+          <HorizontalSlider>
+            {topCollections.map((collection) => (
+              <CardElement
+                key={collection.id}
+                title={collection.title}
+                description={collection.description}
+                infoDecoration={collection.booksCount}
+                imageUrl={collection.cover}
+                button={true}
+                onClick={handleCollectionClick(collection)}
+                buttonLabel={"Добавить в избранное"}
+                buttonIconUrl={AddIcon}
+                buttonChanged={true}
+                buttonChangedIconUrl={Delete}
+                buttonChangedLabel={"Удалить из избранного"}
+                isAuthenticated={isAuthenticated}
+                onUnauthorized={() => setShowLoginModal(true)}
+              />
+            ))}
+          </HorizontalSlider>
+        ) : (
+          <p className="no-data-message">Пока нет данных о коллекциях</p>
+        )}
       </div>
+
+      {/* Топ пользователей */}
       <div className="top-container">
-        <h2>Топ-12 пользователей за неделю</h2>
-        <HorizontalSlider>
-          {topUsers.map((user) => (
-            <CardElement
-              key={user.id}
-              title={user.username}
-              description={getFollowerCount(user.id, user.followers)}
-              imageUrl={user.avatar}
-              button={true}
-              buttonLabel={"Подписаться"}
-              onClick={() => handleUserClick(user)}
-              buttonIconUrl={AddIcon}
-              buttonChanged={true}
-              buttonChangedIconUrl={Delete}
-              buttonChangedLabel={"Отписаться"}
-              onButtonClick={() => handleUserFollow(user.id)}
-              isButtonActive={userFollowStates[user.id] || false}
-              isAuthenticated={isAuthenticated}
-              onUnauthorized={() => setShowLoginModal(true)}
-            />
-          ))}
-        </HorizontalSlider>
+        <h2>Топ-12 пользователей сайта</h2>
+        {popular.loading.users ? (
+          renderLoadingState()
+        ) : popular.error.users ? (
+          renderErrorState(popular.error.users)
+        ) : topUsers.length > 0 ? (
+          <HorizontalSlider>
+            {topUsers.map((user) => (
+              <CardElement
+                key={user.id}
+                title={user.username}
+                description={`${parseInt(user.followers).toLocaleString('ru-RU')} ${russianLocalWordConverter(
+                  parseInt(user.followers),
+                  'подписчик',
+                  'подписчика',
+                  'подписчиков',
+                  'подписчиков'
+                )}`}
+                imageUrl={user.avatar}
+                button={true}
+                buttonLabel={"Подписаться"}
+                onClick={() => handleUserClick(user)}
+                buttonIconUrl={AddIcon}
+                buttonChanged={true}
+                buttonChangedIconUrl={Delete}
+                buttonChangedLabel={"Отписаться"}
+                onButtonClick={() => handleUserFollow(user.id)}
+                isButtonActive={userFollowStates[user.id] || false}
+                isAuthenticated={isAuthenticated}
+                onUnauthorized={() => setShowLoginModal(true)}
+              />
+            ))}
+          </HorizontalSlider>
+        ) : (
+          <p className="no-data-message">Пока нет данных о пользователях</p>
+        )}
       </div>
 
       <Modal

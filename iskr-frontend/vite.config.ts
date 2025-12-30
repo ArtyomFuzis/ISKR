@@ -12,6 +12,12 @@ export default defineConfig({
         target: 'http://155.212.168.176:80',
         changeOrigin: true,
         secure: false,
+      },
+      // Прокси для изображений
+      '/images': {
+        target: 'http://155.212.168.176:80',
+        changeOrigin: true,
+        secure: false,
       }
     }
   }
