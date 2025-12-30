@@ -25,4 +25,25 @@ public interface BookRepository extends JpaRepository<Book, Integer> {
     Page<Book> findAllWithAuthorsAndGenres(Pageable pageable);
 
     boolean existsByIsbn(String isbn);
+
+    boolean existsByPhotoLink(Integer photoLink);
+
+    @Query("SELECT CASE WHEN COUNT(b) > 0 THEN true ELSE false END " +
+            "FROM Book b WHERE b.title = :title AND " +
+            "(b.subtitle = :subtitle OR (:subtitle IS NULL AND b.subtitle IS NULL))")
+    boolean existsByTitleAndSubtitle(@Param("title") String title,
+                                     @Param("subtitle") String subtitle);
+
+    @Query("SELECT CASE WHEN COUNT(b) > 0 THEN true ELSE false END " +
+            "FROM Book b WHERE b.title = :title AND " +
+            "(b.subtitle = :subtitle OR (:subtitle IS NULL AND b.subtitle IS NULL)) " +
+            "AND b.bookId != :bookId")
+    boolean existsByTitleAndSubtitleAndBookIdNot(@Param("title") String title,
+                                                 @Param("subtitle") String subtitle,
+                                                 @Param("bookId") Integer bookId);
+
+    @Query("SELECT CASE WHEN COUNT(b) > 0 THEN true ELSE false END " +
+            "FROM Book b WHERE b.photoLink = :photoLink AND b.bookId != :bookId")
+    boolean existsByPhotoLinkAndBookIdNot(@Param("photoLink") Integer photoLink,
+                                          @Param("bookId") Integer bookId);
 }

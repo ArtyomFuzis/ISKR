@@ -3,7 +3,7 @@ import Input from "../input/Input.tsx";
 import PrimaryButton from "../primary-button/PrimaryButton.tsx";
 import {useState, useEffect} from "react";
 import { useDispatch, useSelector } from 'react-redux';
-import { login, signUp, clearError } from "../../../redux/authSlice.ts";
+import { login, signUp, clearError, clearRegistrationSuccess } from "../../../redux/authSlice.ts";
 import { setDailyGoal, setYearlyGoal, setDailyRead, setYearlyRead } from "../../../redux/goalsSlice.ts";
 import type { RootState } from '../../../redux/store';
 import type { AppDispatch } from '../../../redux/store';
@@ -13,21 +13,26 @@ interface LoginProps {
   onSubmit?: () => void;
   titleId?: string;
   onSwitchType?: () => void;
+  onForgotPassword?: () => void;
 }
 
-function Login({ type: initialType, onSubmit, titleId, onSwitchType }: LoginProps) {
+function Login({ type: initialType, onSubmit, titleId, onSwitchType, onForgotPassword }: LoginProps) {
   const [type, setType] = useState<'login' | 'signup'>(initialType);
   const [isLoading, setIsLoading] = useState(false);
   const [localError, setLocalError] = useState<string>('');
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
   
   const dispatch = useDispatch<AppDispatch>();
   const authError = useSelector((state: RootState) => state.auth.error);
   const authLoading = useSelector((state: RootState) => state.auth.isLoading);
+  const authRegistrationSuccess = useSelector((state: RootState) => state.auth.registrationSuccess);
 
   // Сбрасываем ошибки при изменении типа формы
   useEffect(() => {
     dispatch(clearError());
+    dispatch(clearRegistrationSuccess());
     setLocalError('');
+    setRegistrationSuccess(false);
   }, [type, dispatch]);
 
   useEffect(() => {
@@ -35,6 +40,12 @@ function Login({ type: initialType, onSubmit, titleId, onSwitchType }: LoginProp
       setLocalError(authError);
     }
   }, [authError]);
+
+  useEffect(() => {
+    if (authRegistrationSuccess) {
+      setRegistrationSuccess(true);
+    }
+  }, [authRegistrationSuccess]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -53,8 +64,7 @@ function Login({ type: initialType, onSubmit, titleId, onSwitchType }: LoginProp
         return;
       }
 
-      // Для OAPI отправляем username (а не email)
-      // Если пользователь ввел email, используем его как username
+      // Для OAPI отправляем username
       let username = identifier;
       
       try {
@@ -76,30 +86,25 @@ function Login({ type: initialType, onSubmit, titleId, onSwitchType }: LoginProp
           onSubmit();
         }
       } catch (error) {
-        // Ошибка уже обработана в Redux
         console.error('Login error:', error);
       } finally {
         setIsLoading(false);
       }
     } else {
+      const nickname = formData.get('nickname') as string;
       const email = formData.get('email') as string;
       const username = formData.get('username') as string;
       const password = formData.get('password') as string;
       const confirmPassword = formData.get('confirm-password') as string;
 
-      // Валидация
-      if (!email || !username || !password || !confirmPassword) {
+      // Валидация (убрана проверка длины пароля)
+      if (!nickname || !email || !username || !password || !confirmPassword) {
         setLocalError('Заполните все поля');
         return;
       }
 
       if (password !== confirmPassword) {
         setLocalError('Пароли не совпадают');
-        return;
-      }
-
-      if (password.length < 6) {
-        setLocalError('Пароль должен быть не менее 6 символов');
         return;
       }
 
@@ -112,20 +117,14 @@ function Login({ type: initialType, onSubmit, titleId, onSwitchType }: LoginProp
         setIsLoading(true);
         
         await dispatch(signUp({ 
-          username,
-          email,
-          password 
+          Nickname: nickname,
+          Email: email,
+          Username: username,
+          Password: password
         })).unwrap();
 
-        // После успешной регистрации устанавливаем дефолтные цели
-        dispatch(setDailyGoal(30));
-        dispatch(setDailyRead(0));
-        dispatch(setYearlyGoal(12));
-        dispatch(setYearlyRead(0));
-        
-        if (onSubmit) {
-          onSubmit();
-        }
+        // После успешной регистрации НЕ устанавливаем цели - пользователь еще не вошел
+        // Ждем подтверждения email
       } catch (error) {
         console.error('Signup error:', error);
       } finally {
@@ -136,8 +135,21 @@ function Login({ type: initialType, onSubmit, titleId, onSwitchType }: LoginProp
 
   const handleSwitchType = () => {
     setType(type === 'login' ? 'signup' : 'login');
+    setRegistrationSuccess(false);
     if (onSwitchType) {
       onSwitchType();
+    }
+  };
+
+  const handleForgotPassword = () => {
+    if (onForgotPassword) {
+      onForgotPassword();
+    }
+  };
+
+  const handleCloseModal = () => {
+    if (onSubmit) {
+      onSubmit();
     }
   };
 
@@ -149,113 +161,152 @@ function Login({ type: initialType, onSubmit, titleId, onSwitchType }: LoginProp
       <h2 className="login-title" id={titleId}>
         {type === 'login' ? 'Войти' : 'Регистрация'}
       </h2>
-      <form className="login-form" onSubmit={handleSubmit}>
-        {type === 'signup' && (
-          <>
-            <label htmlFor="email">Электронная почта</label>
-            <Input 
-              type="email" 
-              id="email" 
-              name="email" 
-              required 
-              placeholder="example@mail.com"
-              disabled={loading}
-            />
+      
+      {type === 'signup' && registrationSuccess ? (
+        <div className="registration-success">
+          <p className="registration-success-message">
+            Аккаунт успешно создан! На указанный email было отправлено письмо для подтверждения.
+          </p>
+          <p className="registration-success-note">
+            Пожалуйста, проверьте вашу почту и подтвердите email. После подтверждения вы сможете войти в аккаунт.
+          </p>
+          <PrimaryButton
+            label="Закрыть"
+            onClick={handleCloseModal}
+          />
+        </div>
+      ) : (
+        <>
+          <form className="login-form" onSubmit={handleSubmit}>
+            {type === 'signup' && (
+              <>
+                <label htmlFor="nickname">Никнейм</label>
+                <Input 
+                  type="text" 
+                  id="nickname" 
+                  name="nickname" 
+                  required 
+                  placeholder="Ваш никнейм"
+                  disabled={loading}
+                  minLength={2}
+                />
 
-            <label htmlFor="username">Имя пользователя</label>
-            <Input 
-              type="text" 
-              id="username" 
-              name="username" 
-              required 
-              placeholder="username"
-              disabled={loading}
-              minLength={3}
-            />
-          </>
-        )}
+                <label htmlFor="email">Электронная почта</label>
+                <Input 
+                  type="email" 
+                  id="email" 
+                  name="email" 
+                  required 
+                  placeholder="example@mail.com"
+                  disabled={loading}
+                />
 
-        {type === 'login' && (
-          <>
-            <label htmlFor="identifier">Имя пользователя или электронная почта</label>
-            <Input 
-              type="text" 
-              id="identifier" 
-              name="identifier" 
-              required 
-              placeholder="example@mail.com"
-              disabled={loading}
-            />
-          </>
-        )}
+                <label htmlFor="username">Имя пользователя</label>
+                <Input 
+                  type="text" 
+                  id="username" 
+                  name="username" 
+                  required 
+                  placeholder="username"
+                  disabled={loading}
+                  minLength={3}
+                />
+              </>
+            )}
 
-        <label htmlFor="password">Пароль</label>
-        <Input 
-          type="password" 
-          id="password" 
-          name="password" 
-          required 
-          placeholder="********"
-          disabled={loading}
-          minLength={6}
-        />
+            {type === 'login' && (
+              <>
+                <label htmlFor="identifier">Имя пользователя или электронная почта</label>
+                <Input 
+                  type="text" 
+                  id="identifier" 
+                  name="identifier" 
+                  required 
+                  placeholder="example@mail.com"
+                  disabled={loading}
+                />
+              </>
+            )}
 
-        {type === 'signup' && (
-          <>
-            <label htmlFor="confirm-password">Подтвердите пароль</label>
+            <label htmlFor="password">Пароль</label>
             <Input 
               type="password" 
-              id="confirm-password" 
-              name="confirm-password" 
+              id="password" 
+              name="password" 
               required 
               placeholder="********"
               disabled={loading}
-              minLength={6}
+              // Убрали minLength
             />
-          </>
-        )}
 
-        {displayError && (
-          <div className="login-error">
-            {displayError}
+            {type === 'signup' && (
+              <>
+                <label htmlFor="confirm-password">Подтвердите пароль</label>
+                <Input 
+                  type="password" 
+                  id="confirm-password" 
+                  name="confirm-password" 
+                  required 
+                  placeholder="********"
+                  disabled={loading}
+                  // Убрали minLength
+                />
+              </>
+            )}
+
+            {displayError && (
+              <div className="login-error">
+                {displayError}
+              </div>
+            )}
+
+            <PrimaryButton
+              label={loading ? 'Загрузка...' : (type === 'login' ? 'Войти' : 'Зарегистрироваться')}
+              type="submit"
+              disabled={loading}
+              onClick={() => {}}
+            />
+          </form>
+
+          <div className="login-footer">
+            {type === 'login' ? (
+              <>
+                <div className="login-footer-left">
+                  <button 
+                    onClick={handleSwitchType} 
+                    className="login-switch-button"
+                    disabled={loading}
+                    type="button"
+                  >
+                    Зарегистрироваться
+                  </button>
+                </div>
+                <div className="login-footer-right">
+                  <button 
+                    onClick={handleForgotPassword} 
+                    className="login-forgot-button"
+                    disabled={loading}
+                    type="button"
+                  >
+                    Забыли пароль?
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="login-footer-left">
+                <button 
+                  onClick={handleSwitchType} 
+                  className="login-switch-button"
+                  disabled={loading}
+                  type="button"
+                >
+                  Войти
+                </button>
+              </div>
+            )}
           </div>
-        )}
-
-        <PrimaryButton
-          label={loading ? 'Загрузка...' : (type === 'login' ? 'Войти' : 'Зарегистрироваться')}
-          type="submit"
-          disabled={loading}
-          onClick={() => {}}
-        />
-      </form>
-
-      <div className="login-footer">
-        {type === 'login' ? (
-          <>
-            <span>Еще нет аккаунта?</span>
-            <button 
-              onClick={handleSwitchType} 
-              className="login-switch-button"
-              disabled={loading}
-              type="button"
-            >
-              Зарегистрироваться
-            </button>
-          </>
-        ) : (
-          <>
-            <span>Уже есть аккаунт?</span>
-            <button 
-              onClick={handleSwitchType} 
-              className="login-switch-button"
-              disabled={loading}
-              type="button"
-            >
-              Войти
-            </button>
-          </>
-        )}
-      </div>
+        </>
+      )}
     </div>
   );
 }

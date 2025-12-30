@@ -4,6 +4,7 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -17,6 +18,7 @@ import java.util.Set;
 @AllArgsConstructor
 public class BookCreateDTO {
     @NotBlank(message = "Title is required")
+    @Size(max = 1024, message = "Title must not exceed 1024 characters")
     private String title;
 
     @NotNull(message = "Page count is required")
@@ -33,8 +35,14 @@ public class BookCreateDTO {
     @NotEmpty(message = "At least one genre is required")
     private Set<Integer> genreIds;
 
+    @Size(max = 1024, message = "Subtitle must not exceed 1024 characters")
     private String subtitle;
+
     private String description;
+
+    @Size(max = 17, message = "ISBN must not exceed 17 characters")
     private String isbn;
+
+    @Min(value = 1, message = "Photo link must be a positive integer")
     private Integer photoLink;
 }

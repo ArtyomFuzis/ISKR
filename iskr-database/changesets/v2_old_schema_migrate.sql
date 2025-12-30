@@ -25,7 +25,7 @@ CREATE TABLE ACCOUNTS.USER_PROFILES(
     user_id INTEGER NOT NULL UNIQUE,
     user_imgl_id INTEGER UNIQUE,
     nickname VARCHAR(255) NOT NULL,
-    email VARCHAR(512),
+    email VARCHAR(512) NOT NULL UNIQUE,
     profile_description TEXT,
     birth_date TIMESTAMP WITH TIME ZONE,
     email_verified BOOLEAN NOT NULL DEFAULT false,

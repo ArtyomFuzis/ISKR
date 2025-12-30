@@ -27,11 +27,10 @@ export interface LoginData {
 }
 
 export interface RegisterData {
-  username: string;
-  email?: string;
-  password: string;
-  firstName?: string;
-  lastName?: string;
+  Nickname: string;
+  Email: string;
+  Username: string;
+  Password: string;
 }
 
 export interface AuthResponse {
@@ -44,6 +43,19 @@ export interface AuthResponse {
     session_state: string;
     scope: string;
     'not-before-policy': number;
+  };
+  meta: {
+    processedBy: string;
+    timestamp: string;
+    userId: string;
+  };
+}
+
+export interface RegisterResponse {
+  data: {
+    state: string;
+    message: string;
+    key: any;
   };
   meta: {
     processedBy: string;
@@ -73,12 +85,29 @@ export interface UserData {
   status?: string;
 }
 
+export interface ResetPasswordResponse {
+  data: {
+    state: string;
+    message: string;
+    key: any;
+  };
+  meta: {
+    processedBy: string;
+    timestamp: string;
+    userId: string;
+  };
+}
+
+export interface ResetPasswordConfirmData {
+  Token: string;
+  Password: string;
+}
+
 export const authAPI = {
   login: async (credentials: LoginData): Promise<{ user: UserData; token: string }> => {
     const params = toFormUrlEncoded(credentials);
     const response = await api.post(API_ENDPOINTS.LOGIN, params);
     
-    // Получаем данные пользователя
     const userData = await authAPI.getCurrentUser();
     
     return {
@@ -87,31 +116,18 @@ export const authAPI = {
     };
   },
 
-  register: async (userData: RegisterData): Promise<{ user: UserData; token: string }> => {
+  register: async (userData: RegisterData): Promise<RegisterResponse> => {
+    // Правильные параметры для регистрации
     const registrationData = {
-      username: userData.username,
-      password: userData.password,
-      email: userData.email || `${userData.username}@example.com`,
-      firstName: userData.firstName || userData.username,
-      lastName: userData.lastName || '',
+      Nickname: userData.Nickname,
+      Email: userData.Email,
+      Username: userData.Username,
+      Password: userData.Password,
     };
     
     const params = toFormUrlEncoded(registrationData);
-    const response = await api.post(API_ENDPOINTS.REGISTER, params);
-    
-    // После регистрации логинимся
-    const loginResponse = await api.post(API_ENDPOINTS.LOGIN, toFormUrlEncoded({
-      username: userData.username,
-      password: userData.password
-    }));
-    
-    // Получаем данные пользователя
-    const currentUser = await authAPI.getCurrentUser();
-    
-    return {
-      token: loginResponse.data.data.access_token,
-      user: currentUser
-    };
+    const response = await api.post('/v1/accounts/user', params); // Прямой endpoint
+    return response.data;
   },
 
   logout: async (): Promise<void> => {
@@ -126,7 +142,6 @@ export const authAPI = {
     try {
       const response = await api.get(API_ENDPOINTS.GET_CURRENT_USER);
       
-      // Обрабатываем структуру ответа
       const responseData = response.data.data || response.data;
       
       if (responseData.state === 'OK' && responseData.key) {
@@ -150,6 +165,18 @@ export const authAPI = {
       console.error('Error getting current user:', error);
       throw error;
     }
+  },
+
+  resetPassword: async (login: string): Promise<ResetPasswordResponse> => {
+    const params = toFormUrlEncoded({ login });
+    const response = await api.post(API_ENDPOINTS.RESET_PASSWORD, params);
+    return response.data;
+  },
+
+  resetPasswordConfirm: async (data: ResetPasswordConfirmData): Promise<ResetPasswordResponse> => {
+    const params = toFormUrlEncoded(data);
+    const response = await api.post(API_ENDPOINTS.RESET_PASSWORD_CONFIRM, params);
+    return response.data;
   },
 
   getUserProfile: async (): Promise<UserData> => {

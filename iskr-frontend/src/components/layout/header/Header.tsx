@@ -1,7 +1,7 @@
 import './Header.scss';
 import MainLogo from '../../../assets/elements/logo.svg';
 import { useDispatch, useSelector } from "react-redux";
-import { logout, checkAuth } from "../../../redux/authSlice.ts";
+import { logout, checkAuth, clearRegistrationSuccess } from "../../../redux/authSlice.ts";
 import PrimaryButton from "../../controls/primary-button/PrimaryButton.tsx";
 import SecondaryButton from "../../controls/secondary-button/SecondaryButton.tsx";
 import { Link, useNavigate } from "react-router-dom";
@@ -13,18 +13,33 @@ import type { RootState } from '../../../redux/store';
 import type { AppDispatch } from '../../../redux/store';
 import Modal from "../../controls/modal/Modal.tsx";
 import Login from "../../controls/login/Login.tsx";
+import ForgotPassword from "../../controls/forgot-password/ForgotPassword.tsx";
 import { useEffect, useState } from "react";
 import profileButton from "../../../assets/elements/profileButton.svg";
 
-function Header() {
+interface HeaderProps {
+  showLoginModal?: boolean;
+}
+
+function Header({ showLoginModal = false }: HeaderProps) {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const isAuthenticated = useSelector((state: RootState) => state.auth.isAuthenticated);
   const user = useSelector((state: RootState) => state.auth.user);
 
   const [modalOpen, setModalOpen] = useState(false);
+  const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
   const [authType, setAuthType] = useState<'login'|'signup'>('login');
   const [isAdmin, setIsAdmin] = useState(false);
+
+  // Автоматически открываем модалку если получен соответствующий пропс
+  useEffect(() => {
+    if (showLoginModal && !isAuthenticated) {
+      setAuthType('login');
+      setModalOpen(true);
+      navigate('.', { replace: true, state: {} });
+    }
+  }, [showLoginModal, isAuthenticated, navigate]);
 
   // При загрузке компонента проверяем авторизацию
   useEffect(() => {
@@ -49,29 +64,26 @@ function Header() {
   useEffect(() => {
     // Проверяем роль и статус пользователя
     if (user) {
-      // Проверяем на админа (например, если username содержит 'admin')
       const isUserAdmin = user.username?.toLowerCase().includes('admin') || 
                          user.role === 'admin';
       setIsAdmin(isUserAdmin);
       
-      // Проверяем, не забанен ли пользователь
       if (user.status === 'banned') {
-        // Можно показать сообщение или разлогинить
         console.log('User is banned');
-        // dispatch(logout());
-        // navigate('/');
       }
     }
-  }, [user, dispatch, navigate]);
+  }, [user]);
 
   const handleSignIn = () => {
     setAuthType('signup');
     setModalOpen(true);
+    dispatch(clearRegistrationSuccess());
   };
 
   const handleLogin = () => {
     setAuthType('login');
     setModalOpen(true);
+    dispatch(clearRegistrationSuccess());
   };
 
   const handleLogout = () => {
@@ -81,18 +93,33 @@ function Header() {
 
   const handleSwitchType = () => {
     setAuthType(authType === 'login' ? 'signup' : 'login');
+    dispatch(clearRegistrationSuccess());
+  };
+
+  const handleForgotPassword = () => {
+    setModalOpen(false);
+    setForgotPasswordOpen(true);
   };
 
   const handleModalClose = () => {
     setModalOpen(false);
+    setAuthType('login');
+    dispatch(clearRegistrationSuccess());
+  };
+
+  const handleForgotPasswordClose = () => {
+    setForgotPasswordOpen(false);
+  };
+
+  const handleBackToLogin = () => {
+    setForgotPasswordOpen(false);
+    setModalOpen(true);
     setAuthType('login');
   };
 
   const handleAuthSuccess = () => {
     setModalOpen(false);
     setAuthType('login');
-    // Не перезагружаем страницу, а просто закрываем модалку
-    // Состояние обновится через Redux
   };
 
   return (
@@ -137,6 +164,7 @@ function Header() {
         </div>
       </header>
 
+      {/* Модальное окно входа/регистрации */}
       <Modal
         open={modalOpen}
         onClose={handleModalClose}
@@ -148,6 +176,21 @@ function Header() {
           titleId="auth-dialog-title"
           onSubmit={handleAuthSuccess}
           onSwitchType={handleSwitchType}
+          onForgotPassword={handleForgotPassword}
+        />
+      </Modal>
+
+      {/* Модальное окно восстановления пароля */}
+      <Modal
+        open={forgotPasswordOpen}
+        onClose={handleForgotPasswordClose}
+        titleId="forgot-password-dialog-title"
+        closeOnBackdropClick={true}
+      >
+        <ForgotPassword
+          onClose={handleForgotPasswordClose}
+          onBackToLogin={handleBackToLogin}
+          titleId="forgot-password-dialog-title"
         />
       </Modal>
     </>

@@ -44,27 +44,46 @@ public class GlobalExceptionHandler {
                 .body(new ChangeDTO<>(State.Fail_BadData, errorMessage, errors));
     }
 
-    @ExceptionHandler(DataAccessException.class)
-    public ResponseEntity<ChangeDTO<Object>> handleDatabaseExceptions(DataAccessException ex) {
-        log.error("Database error occurred", ex);
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ChangeDTO<Object>> handleDataIntegrityViolationException(DataIntegrityViolationException ex) {
+        log.error("Data integrity violation: ", ex);
 
-        if (ex instanceof DataIntegrityViolationException) {
-            return ResponseEntity
-                    .status(HttpStatus.CONFLICT)
-                    .body(new ChangeDTO<>(
-                            State.Fail_Conflict,
-                            "Database integrity violation: " + ex.getMostSpecificCause().getMessage(),
-                            null
-                    ));
+        String message = ex.getMostSpecificCause().getMessage();
+        String userMessage;
+
+        if (message.contains("added_by")) {
+            userMessage = "User with specified ID does not exist";
+        } else if (message.contains("photo_link")) {
+            userMessage = "Image with specified photo link does not exist";
+        } else if (message.contains("subs_user_id") || message.contains("subs_user_on_id")) {
+            userMessage = "User with specified ID does not exist";
+        } else if (message.contains("unique constraint") && message.contains("books_title_subtitle_key")) {
+            userMessage = "A book with this title and subtitle combination already exists";
+        } else if (message.contains("unique constraint") && message.contains("books_isbn_key")) {
+            userMessage = "Book with this ISBN already exists";
+        } else if (message.contains("unique constraint") && message.contains("books_photo_link_key")) {
+            userMessage = "Book with this photo link already exists";
+        } else {
+            userMessage = "Data integrity violation: " + message;
         }
 
         return ResponseEntity
-                .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new ChangeDTO<>(
-                        State.Fail,
-                        "Database operation failed",
-                        null
-                ));
+                .status(HttpStatus.CONFLICT)
+                .body(new ChangeDTO<>(State.Fail_Conflict, userMessage, null));
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ChangeDTO<Object>> handleMissingParameterException(MissingServletRequestParameterException ex) {
+        String errorMessage = String.format(
+                "Missing required parameter: '%s' of type %s",
+                ex.getParameterName(),
+                ex.getParameterType()
+        );
+
+        log.warn("Missing parameter: {}", errorMessage);
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(new ChangeDTO<>(State.Fail_BadData, errorMessage, null));
     }
 
     @ExceptionHandler({DateTimeParseException.class, HttpMessageNotReadableException.class})
@@ -129,19 +148,6 @@ public class GlobalExceptionHandler {
         log.warn("Media type not supported: {}", errorMessage);
         return ResponseEntity
                 .status(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
-                .body(new ChangeDTO<>(State.Fail_BadData, errorMessage, null));
-    }
-
-    @ExceptionHandler(MissingServletRequestParameterException.class)
-    public ResponseEntity<ChangeDTO<Object>> handleMissingParameterException(MissingServletRequestParameterException ex) {
-        String errorMessage = String.format(
-                "Missing required parameter: %s",
-                ex.getParameterName()
-        );
-
-        log.warn("Missing parameter: {}", errorMessage);
-        return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
                 .body(new ChangeDTO<>(State.Fail_BadData, errorMessage, null));
     }
 

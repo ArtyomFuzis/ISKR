@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk, type PayloadAction } from '@reduxjs/toolkit';
-import { authAPI, type LoginData, type RegisterData, type UserData } from '../api/authService';
+import { authAPI, type LoginData, type RegisterData, type UserData, type ResetPasswordConfirmData, type RegisterResponse } from '../api/authService';
+import { API_STATES, ERROR_STATUSES } from '../constants/api';
 
 export interface User extends UserData {
   id: string | number;
@@ -17,6 +18,7 @@ interface AuthState {
   token: string | null;
   isLoading: boolean;
   error: string | null;
+  registrationSuccess: boolean;
 }
 
 // Безопасная функция для получения данных из localStorage
@@ -44,6 +46,7 @@ const initialState: AuthState = {
   token: getStoredToken(),
   isLoading: false,
   error: null,
+  registrationSuccess: false,
 };
 
 // Асинхронные thunk'и для работы с API
@@ -54,10 +57,17 @@ export const login = createAsyncThunk(
       const response = await authAPI.login(credentials);
       return response;
     } catch (error: any) {
-      const errorMessage = error.response?.data?.data?.message || 
-                          error.response?.data?.message || 
-                          error.message || 
-                          'Ошибка входа';
+      let errorMessage = error.response?.data?.data?.message || 
+                        error.response?.data?.message || 
+                        error.message || 
+                        'Ошибка входа';
+
+      if (errorMessage === 'Invalid credentials') {
+        errorMessage = 'Неверный логин или пароль';
+      } else if (errorMessage === 'Account is not fully set-up') {
+        errorMessage = 'Email пользователя не подтвержден или пользователь заблокирован';
+      }
+
       return rejectWithValue(errorMessage);
     }
   }
@@ -70,10 +80,79 @@ export const signUp = createAsyncThunk(
       const response = await authAPI.register(userData);
       return response;
     } catch (error: any) {
-      const errorMessage = error.response?.data?.data?.message || 
-                          error.response?.data?.message || 
-                          error.message || 
-                          'Ошибка регистрации';
+      let errorMessage = 'Ошибка регистрации';
+      
+      if (error.response?.status === ERROR_STATUSES.CONFLICT) {
+        const details = error.response?.data?.data?.details;
+        if (details?.state === API_STATES.FAIL_CONFLICT) {
+          if (details?.message?.includes('Username already taken')) {
+            errorMessage = 'Имя пользователя уже занято';
+          } else if (details?.message?.includes('email already exists')) {
+            errorMessage = 'Email уже используется';
+          } else {
+            errorMessage = details?.message || 'Конфликт данных';
+          }
+        } else if (details?.state === API_STATES.FAIL) {
+          if (details?.message?.includes('duplicate key value violates unique constraint "user_profiles_email_key"')) {
+            errorMessage = 'Email уже используется';
+          } else {
+            errorMessage = details?.message || 'Ошибка базы данных';
+          }
+        }
+      } else if (error.response?.data?.data?.message) {
+        errorMessage = error.response.data.data.message;
+      }
+      
+      return rejectWithValue(errorMessage);
+    }
+  }
+);
+
+// Добавляем thunk для восстановления пароля
+export const resetPassword = createAsyncThunk(
+  'auth/resetPassword',
+  async (login: string, { rejectWithValue }) => {
+    try {
+      const response = await authAPI.resetPassword(login);
+      return response;
+    } catch (error: any) {
+      let errorMessage = error.response?.data?.data?.message || 
+                        error.response?.data?.message || 
+                        error.message || 
+                        'Ошибка при восстановлении пароля';
+      
+      return rejectWithValue(errorMessage);
+    }
+  }
+);
+
+// Добавляем thunk для подтверждения сброса пароля
+export const resetPasswordConfirm = createAsyncThunk(
+  'auth/resetPasswordConfirm',
+  async (data: ResetPasswordConfirmData, { rejectWithValue }) => {
+    try {
+      const response = await authAPI.resetPasswordConfirm(data);
+      
+      // Проверяем статус ответа
+      if (response.data.state === API_STATES.OK) {
+        return response;
+      } else if (response.data.state === API_STATES.FAIL_NOT_FOUND) {
+        return rejectWithValue('Недействительная ссылка для сброса пароля');
+      } else if (response.data.state === 'Fail_Expired') {
+        return rejectWithValue('Ссылка для сброса пароля просрочена. Запросите новую ссылку.');
+      } else {
+        return rejectWithValue(response.data.message || 'Ошибка при сбросе пароля');
+      }
+    } catch (error: any) {
+      let errorMessage = error.response?.data?.data?.message || 
+                        error.response?.data?.message || 
+                        error.message || 
+                        'Ошибка при сбросе пароля';
+      
+      if (error.response?.status === 404) {
+        errorMessage = 'Недействительная ссылка для сброса пароля';
+      }
+      
       return rejectWithValue(errorMessage);
     }
   }
@@ -87,7 +166,6 @@ export const checkAuth = createAsyncThunk(
       const userData = await authAPI.getCurrentUser();
       return userData;
     } catch (error: any) {
-      // Если не авторизован, очищаем состояние
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       
@@ -108,6 +186,7 @@ const authSlice = createSlice({
       state.isAuthenticated = false;
       state.user = null;
       state.token = null;
+      state.registrationSuccess = false;
       localStorage.removeItem('token');
       localStorage.removeItem('user');
     },
@@ -127,6 +206,9 @@ const authSlice = createSlice({
     clearError: (state) => {
       state.error = null;
     },
+    clearRegistrationSuccess: (state) => {
+      state.registrationSuccess = false;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -141,7 +223,6 @@ const authSlice = createSlice({
         state.user = action.payload.user;
         state.token = action.payload.token;
         
-        // Безопасное сохранение в localStorage
         try {
           if (action.payload.token) {
             localStorage.setItem('token', action.payload.token);
@@ -162,25 +243,41 @@ const authSlice = createSlice({
       .addCase(signUp.pending, (state) => {
         state.isLoading = true;
         state.error = null;
+        state.registrationSuccess = false;
       })
       .addCase(signUp.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.isAuthenticated = true;
-        state.user = action.payload.user;
-        state.token = action.payload.token;
-        
-        try {
-          if (action.payload.token) {
-            localStorage.setItem('token', action.payload.token);
-          }
-          if (action.payload.user) {
-            localStorage.setItem('user', JSON.stringify(action.payload.user));
-          }
-        } catch (error) {
-          console.error('Error saving to localStorage:', error);
-        }
+        state.registrationSuccess = true;
+        state.error = null;
       })
       .addCase(signUp.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+        state.registrationSuccess = false;
+      })
+      
+      // Восстановление пароля
+      .addCase(resetPassword.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(resetPassword.fulfilled, (state) => {
+        state.isLoading = false;
+      })
+      .addCase(resetPassword.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+      })
+      
+      // Подтверждение сброса пароля
+      .addCase(resetPasswordConfirm.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(resetPasswordConfirm.fulfilled, (state) => {
+        state.isLoading = false;
+      })
+      .addCase(resetPasswordConfirm.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
       })
@@ -220,7 +317,6 @@ const authSlice = createSlice({
   },
 });
 
-// Экспортируем все actions
-export const { logout, setUsername, clearError } = authSlice.actions;
+export const { logout, setUsername, clearError, clearRegistrationSuccess } = authSlice.actions;
 
 export default authSlice.reducer;

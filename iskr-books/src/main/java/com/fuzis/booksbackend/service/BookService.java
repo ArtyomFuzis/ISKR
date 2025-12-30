@@ -10,9 +10,9 @@ import com.fuzis.booksbackend.transfer.BookCreateDTO;
 import com.fuzis.booksbackend.transfer.BookUpdateDTO;
 import com.fuzis.booksbackend.transfer.ChangeDTO;
 import com.fuzis.booksbackend.transfer.state.State;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -36,13 +36,30 @@ public class BookService {
         try {
             log.info("Creating book with title: {}", dto.getTitle());
 
-            // Validate ISBN uniqueness
+            // Validate ISBN uniqueness if provided
             if (dto.getIsbn() != null && !dto.getIsbn().isBlank()) {
                 if (bookRepository.existsByIsbn(dto.getIsbn())) {
                     log.warn("Book with ISBN {} already exists", dto.getIsbn());
                     return new ChangeDTO<>(State.Fail_Conflict,
                             "Book with this ISBN already exists", null);
                 }
+            }
+
+            // Validate photoLink uniqueness if provided
+            if (dto.getPhotoLink() != null) {
+                if (bookRepository.existsByPhotoLink(dto.getPhotoLink())) {
+                    log.warn("Book with photoLink {} already exists", dto.getPhotoLink());
+                    return new ChangeDTO<>(State.Fail_Conflict,
+                            "Book with this photo link already exists", null);
+                }
+            }
+
+            // Validate unique constraint (title, subtitle)
+            if (bookRepository.existsByTitleAndSubtitle(dto.getTitle(), dto.getSubtitle())) {
+                log.warn("Book with title '{}' and subtitle '{}' already exists",
+                        dto.getTitle(), dto.getSubtitle());
+                return new ChangeDTO<>(State.Fail_Conflict,
+                        "A book with this title and subtitle combination already exists", null);
             }
 
             // Fetch authors by IDs
@@ -86,6 +103,9 @@ public class BookService {
             return new ChangeDTO<>(State.OK,
                     "Book created successfully", savedBook);
 
+        } catch (DataIntegrityViolationException e) {
+            log.error("Data integrity violation when creating book: ", e);
+            return handleDataIntegrityViolation(e);
         } catch (Exception e) {
             log.error("Error creating book: ", e);
             return new ChangeDTO<>(State.Fail,
@@ -101,7 +121,7 @@ public class BookService {
                     .map(book -> {
                         log.debug("Book found with ID: {}", id);
                         return new ChangeDTO<>(State.OK,
-                                "Book retrieved successfully", (Object)book);
+                                "Book retrieved successfully", (Object) book);
                     })
                     .orElseGet(() -> {
                         log.warn("Book not found with ID: {}", id);
@@ -121,6 +141,44 @@ public class BookService {
 
             return bookRepository.findById(id)
                     .map(book -> {
+                        // Check if title or subtitle changed and validate uniqueness
+                        boolean titleChanged = dto.getTitle() != null && !dto.getTitle().isBlank()
+                                && !dto.getTitle().equals(book.getTitle());
+                        boolean subtitleChanged = dto.getSubtitle() != null
+                                && (book.getSubtitle() == null || !dto.getSubtitle().equals(book.getSubtitle()));
+
+                        if (titleChanged || subtitleChanged) {
+                            String newTitle = titleChanged ? dto.getTitle() : book.getTitle();
+                            String newSubtitle = subtitleChanged ? dto.getSubtitle() : book.getSubtitle();
+
+                            if (bookRepository.existsByTitleAndSubtitleAndBookIdNot(newTitle, newSubtitle, id)) {
+                                log.warn("Book with title '{}' and subtitle '{}' already exists (excluding current book)",
+                                        newTitle, newSubtitle);
+                                return new ChangeDTO<>(State.Fail_Conflict,
+                                        "A book with this title and subtitle combination already exists", null);
+                            }
+                        }
+
+                        // Check ISBN uniqueness if changed
+                        if (dto.getIsbn() != null && !dto.getIsbn().isBlank()
+                                && (book.getIsbn() == null || !dto.getIsbn().equals(book.getIsbn()))) {
+                            if (bookRepository.existsByIsbn(dto.getIsbn())) {
+                                log.warn("Book with ISBN {} already exists", dto.getIsbn());
+                                return new ChangeDTO<>(State.Fail_Conflict,
+                                        "Book with this ISBN already exists", null);
+                            }
+                        }
+
+                        // Check photoLink uniqueness if changed
+                        if (dto.getPhotoLink() != null && (book.getPhotoLink() == null
+                                || !dto.getPhotoLink().equals(book.getPhotoLink()))) {
+                            if (bookRepository.existsByPhotoLinkAndBookIdNot(dto.getPhotoLink(), id)) {
+                                log.warn("Book with photoLink {} already exists", dto.getPhotoLink());
+                                return new ChangeDTO<>(State.Fail_Conflict,
+                                        "Book with this photo link already exists", null);
+                            }
+                        }
+
                         // Update fields if provided
                         if (dto.getTitle() != null && !dto.getTitle().isBlank()) {
                             book.setTitle(dto.getTitle());
@@ -129,13 +187,6 @@ public class BookService {
                             book.setSubtitle(dto.getSubtitle());
                         }
                         if (dto.getIsbn() != null && !dto.getIsbn().isBlank()) {
-                            // Check ISBN uniqueness if changed
-                            if (!dto.getIsbn().equals(book.getIsbn()) &&
-                                    bookRepository.existsByIsbn(dto.getIsbn())) {
-                                log.warn("Book with ISBN {} already exists", dto.getIsbn());
-                                return new ChangeDTO<>(State.Fail_Conflict,
-                                        "Book with this ISBN already exists", null);
-                            }
                             book.setIsbn(dto.getIsbn());
                         }
                         if (dto.getDescription() != null) {
@@ -177,7 +228,7 @@ public class BookService {
                         Book updatedBook = bookRepository.save(book);
                         log.info("Book updated successfully with ID: {}", id);
                         return new ChangeDTO<>(State.OK,
-                                "Book updated successfully", (Object)updatedBook);
+                                "Book updated successfully", (Object) updatedBook);
                     })
                     .orElseGet(() -> {
                         log.warn("Book not found with ID: {}", id);
@@ -185,13 +236,16 @@ public class BookService {
                                 "Book not found", null);
                     });
 
+        } catch (DataIntegrityViolationException e) {
+            log.error("Data integrity violation when updating book: ", e);
+            return handleDataIntegrityViolation(e);
         } catch (Exception e) {
             log.error("Error updating book with ID {}: ", id, e);
             return new ChangeDTO<>(State.Fail,
                     "Error updating book: " + e.getMessage(), null);
         }
     }
-    
+
     public ChangeDTO<Object> deleteBook(Integer id) {
         try {
             log.info("Deleting book with ID: {}", id);
@@ -207,6 +261,9 @@ public class BookService {
             return new ChangeDTO<>(State.OK,
                     "Book deleted successfully", null);
 
+        } catch (DataIntegrityViolationException e) {
+            log.error("Data integrity violation when deleting book: ", e);
+            return handleDataIntegrityViolation(e);
         } catch (Exception e) {
             log.error("Error deleting book with ID {}: ", id, e);
             return new ChangeDTO<>(State.Fail,
@@ -250,6 +307,30 @@ public class BookService {
             log.error("Error retrieving books list: ", e);
             return new ChangeDTO<>(State.Fail,
                     "Error retrieving books: " + e.getMessage(), null);
+        }
+    }
+
+    private ChangeDTO<Object> handleDataIntegrityViolation(DataIntegrityViolationException e) {
+        String message = e.getMostSpecificCause().getMessage();
+
+        if (message.contains("added_by")) {
+            return new ChangeDTO<>(State.Fail_BadData,
+                    "User with specified ID does not exist", null);
+        } else if (message.contains("photo_link")) {
+            return new ChangeDTO<>(State.Fail_BadData,
+                    "Image with specified photo link does not exist", null);
+        } else if (message.contains("unique constraint") && message.contains("books_title_subtitle_key")) {
+            return new ChangeDTO<>(State.Fail_Conflict,
+                    "A book with this title and subtitle combination already exists", null);
+        } else if (message.contains("unique constraint") && message.contains("books_isbn_key")) {
+            return new ChangeDTO<>(State.Fail_Conflict,
+                    "Book with this ISBN already exists", null);
+        } else if (message.contains("unique constraint") && message.contains("books_photo_link_key")) {
+            return new ChangeDTO<>(State.Fail_Conflict,
+                    "Book with this photo link already exists", null);
+        } else {
+            return new ChangeDTO<>(State.Fail_Conflict,
+                    "Data integrity violation: " + message, null);
         }
     }
 }

@@ -27,7 +27,9 @@ public class UserProfile {
     @JoinColumn(name = "user_id")
     private User user;
 
-    private Integer user_imgl_id;
+    @ManyToOne
+    @JoinColumn(name = "user_imgl_id")
+    private ImageLink user_imgl_id;
 
     private String nickname;
 
