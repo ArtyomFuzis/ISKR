@@ -16,6 +16,10 @@ interface SearchState {
   limit: number;
   hasMore: boolean;
   total: number;
+  // Добавляем новые поля для жанров
+  genres: Array<{id: number, name: string}>;
+  loadingGenres: boolean;
+  selectedGenreName: string; // для отображения в UI
 }
 
 const initialState: SearchState = {
@@ -32,6 +36,10 @@ const initialState: SearchState = {
   limit: 10,
   hasMore: false,
   total: 0,
+  // Инициализируем новые поля
+  genres: [],
+  loadingGenres: false,
+  selectedGenreName: 'Все жанры',
 };
 
 export const performSearch = createAsyncThunk(
@@ -59,6 +67,18 @@ export const performSearch = createAsyncThunk(
   }
 );
 
+// Добавляем thunk для загрузки жанров
+export const fetchGenres = createAsyncThunk(
+  'search/fetchGenres',
+  async (_, { rejectWithValue }) => {
+    try {
+      return await searchAPI.fetchGenres();
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Ошибка загрузки жанров');
+    }
+  }
+);
+
 const searchSlice = createSlice({
   name: 'search',
   initialState,
@@ -72,6 +92,9 @@ const searchSlice = createSlice({
     setGenre: (state, action: PayloadAction<number | null>) => {
       state.genre = action.payload;
     },
+    setGenreName: (state, action: PayloadAction<string>) => {
+      state.selectedGenreName = action.payload;
+    },
     resetSearch: (state) => {
       state.results = { books: [], users: [], collections: [] };
       state.hasMore = false;
@@ -83,6 +106,8 @@ const searchSlice = createSlice({
     },
     clearSearch: (state) => {
       state.query = '';
+      state.genre = null;
+      state.selectedGenreName = 'Все жанры';
       state.results = { books: [], users: [], collections: [] };
       state.hasMore = false;
       state.total = 0;
@@ -116,9 +141,20 @@ const searchSlice = createSlice({
       .addCase(performSearch.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
+      })
+      .addCase(fetchGenres.pending, (state) => {
+        state.loadingGenres = true;
+      })
+      .addCase(fetchGenres.fulfilled, (state, action) => {
+        state.loadingGenres = false;
+        state.genres = action.payload;
+      })
+      .addCase(fetchGenres.rejected, (state, action) => {
+        state.loadingGenres = false;
+        state.error = action.payload as string;
       });
   },
 });
 
-export const { setQuery, setTypes, setGenre, resetSearch, increaseLimit, clearSearch } = searchSlice.actions;
+export const { setQuery, setTypes, setGenre, setGenreName, resetSearch, increaseLimit, clearSearch } = searchSlice.actions;
 export default searchSlice.reducer;

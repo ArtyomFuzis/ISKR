@@ -8,22 +8,23 @@ interface SearchFiltersProps {
   selectedGenre: string;
   onGenreChange: (genre: string) => void;
   onReset: () => void;
+  genres: string[];
+  loadingGenres: boolean;
 }
 
-function SearchFilters({ selectedTypes, onTypeChange, selectedGenre, onGenreChange, onReset }: SearchFiltersProps) {
+function SearchFilters({ 
+  selectedTypes, 
+  onTypeChange, 
+  selectedGenre, 
+  onGenreChange, 
+  onReset,
+  genres,
+  loadingGenres 
+}: SearchFiltersProps) {
   const types = [
     { id: 'books', label: 'Книги' },
     { id: 'users', label: 'Пользователи' },
     { id: 'collections', label: 'Коллекции' }
-  ];
-
-  const genres = [
-    'Все жанры',
-    'Классика',
-    'Фантастика',
-    'Детектив',
-    'Роман',
-    'Фэнтези'
   ];
 
   return (
@@ -48,7 +49,9 @@ function SearchFilters({ selectedTypes, onTypeChange, selectedGenre, onGenreChan
             options={genres}
             onChange={onGenreChange}
             placeholder="Выберите жанр"
+            disabled={loadingGenres}
           />
+          {loadingGenres && <div className="loading-genres">Загрузка жанров...</div>}
         </div>
       </div>
 

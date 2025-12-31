@@ -20,6 +20,7 @@ interface CardElementProps {
   isAuthenticated?: boolean;
   onUnauthorized?: () => void;
   buttonClicked?: boolean;
+  starsSize?: 'small' | 'medium' | 'large'; // Добавляем пропс для размера звезд
 }
 
 function CardElement({
@@ -38,7 +39,8 @@ function CardElement({
   buttonChangedIconUrl,
   isAuthenticated = true,
   onUnauthorized,
-  buttonClicked = false
+  buttonClicked = false,
+  starsSize = 'small' // По умолчанию small для компактности
 }: CardElementProps) {
   const [clicked, setClicked] = useState(buttonClicked);
   const [buttonImg, setButtonImg] = useState(buttonIconUrl);
@@ -68,7 +70,7 @@ function CardElement({
       <div className="card-info">
         {starsCount || infoDecoration ?
           <div className="card-info-decoration">
-            {starsCount ? <Stars count={starsCount}/> : null}
+            {starsCount ? <Stars count={starsCount} size={starsSize} showValue={true}/> : null}
             {infoDecoration ? <span className="info-decoration-text">{infoDecoration}</span> : null}
           </div> : null}
         <div className="card-text-container">

@@ -45,11 +45,17 @@ export interface SearchUserData {
   imageExtension?: string;
 }
 
+// Добавляем новый тип для жанров
+export interface SearchGenreData {
+  id: number;
+  name: string;
+}
+
 export interface SearchResultItem {
   id: string;
-  type: 'book' | 'user' | 'collection';
+  type: 'book' | 'user' | 'collection' | 'genre'; // добавляем 'genre'
   score: number;
-  data: SearchBookData | SearchCollectionData | SearchUserData;
+  data: SearchBookData | SearchCollectionData | SearchUserData | SearchGenreData;
   highlights: any;
 }
 

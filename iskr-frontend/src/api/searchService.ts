@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { OAPI_BASE_URL, IMAGES_BASE_URL } from '../constants/api';
-import type { SearchParams, SearchResponse, SearchResultItem, SearchBookData, SearchCollectionData, SearchUserData } from '../types/search';
+import type { SearchParams, SearchResponse, SearchResultItem, SearchBookData, SearchCollectionData, SearchUserData, SearchGenreData } from '../types/search';
 import type { Book, Collection, User, PhotoLink, ImageData } from '../types/popular';
 
 // Функция для преобразования объекта в URLSearchParams
@@ -60,6 +60,10 @@ const isCollectionData = (data: any): data is SearchCollectionData => {
 
 const isUserData = (data: any): data is SearchUserData => {
   return data && typeof data === 'object' && 'username' in data && 'email' in data;
+};
+
+const isGenreData = (data: any): data is SearchGenreData => {
+  return data && typeof data === 'object' && 'id' in data && 'name' in data;
 };
 
 export const searchAPI = {
@@ -137,6 +141,39 @@ export const searchAPI = {
       total,
       hasMore: total > items.length
     };
+  },
+
+  // Новая функция для загрузки жанров
+  fetchGenres: async (limit: number = 50) => {
+    try {
+      const params = {
+        Query: '', // Пустой запрос для получения всех жанров
+        Types: 'genre',
+        Limit: limit
+      };
+      
+      const formData = toFormUrlEncoded(params);
+      const response = await searchApi.post<SearchResponse>('/v1/search/query', formData);
+      
+      // Извлекаем жанры из ответа
+      const items = response.data.data.items || [];
+      const genres: Array<{id: number, name: string}> = [];
+      
+      items.forEach((item: SearchResultItem) => {
+        if (item.type === 'genre' && isGenreData(item.data)) {
+          const genreData = item.data as SearchGenreData;
+          genres.push({
+            id: genreData.id,
+            name: genreData.name
+          });
+        }
+      });
+      
+      return genres;
+    } catch (error: any) {
+      console.error('Error fetching genres:', error);
+      return [];
+    }
   },
 };
 

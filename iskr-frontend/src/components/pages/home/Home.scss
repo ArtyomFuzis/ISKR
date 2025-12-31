@@ -7,6 +7,28 @@
   .input-container {
     max-width: 50%;
   }
+  
+  .search-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    gap: 1rem;
+    
+    .search-spinner {
+      width: 24px;
+      height: 24px;
+      border: 2px solid rgba($pink, 0.3);
+      border-top: 2px solid $pink;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    p {
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 0.9rem;
+    }
+  }
 }
 
 .top-container {
@@ -87,39 +109,48 @@
   .search-result-info {
     display: flex;
     flex-direction: row;
-    align-items: center;
+    align-items: flex-start; // Меняем с center на flex-start для лучшего выравнивания
 
     img {
       height: 100px;
       width: 63px;
       margin-right: 2rem;
+      flex-shrink: 0;
+    }
+
+    > div {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-height: 100px; // Минимальная высота для выравнивания
     }
 
     .search-result-title {
       display: inline-block;
       font-size: 1.25rem;
       font-weight: bold;
+      margin-bottom: 0.25rem;
     }
 
     .search-result-author {
       color: rgba(255, 255, 255, 0.7);
-      margin-top: 0.25rem;
+      margin-bottom: 0.5rem;
     }
 
     .search-result-rating {
+      margin-top: auto; // Прижимаем рейтинг к низу контейнера
       display: flex;
       align-items: center;
-      gap: 0.5rem;
-      margin-top: 0.25rem;
       
       .stars-container {
         display: flex;
         align-items: center;
-      }
-      
-      .rating-value {
-        font-size: 0.875rem;
-        color: rgba(255, 255, 255, 0.7);
+        
+        .rating-value {
+          font-size: 0.875rem;
+          color: rgba(255, 255, 255, 0.7);
+          margin-left: 4px;
+        }
       }
     }
   }

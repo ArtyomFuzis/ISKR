@@ -18,15 +18,18 @@ import { fetchAllPopular } from '../../../redux/popularSlice';
 import { 
   setQuery, 
   setTypes, 
+  setGenre,
+  setGenreName,
   resetSearch, 
   increaseLimit, 
   clearSearch,
-  performSearch 
+  performSearch,
+  fetchGenres
 } from '../../../redux/searchSlice';
 import type { User, Book, Collection } from '../../../types/popular';
 import { getBookImageUrl, getUserImageUrl, getCollectionImageUrl, formatRating } from '../../../api/popularService';
 import PlaceholderImage from '../../../assets/images/placeholder.jpg';
-import { useDebounce } from '../../../hooks/useDebounce.ts';
+import { useDebounce } from '../../../hooks/useDebounce';
 import PrimaryButton from '../../controls/primary-button/PrimaryButton.tsx';
 
 function Home() {
@@ -49,9 +52,10 @@ function Home() {
   // Используем дебаунс для поискового запроса
   const debouncedSearchQuery = useDebounce(localSearchQuery, 500);
 
-  // Загружаем популярный контент при монтировании компонента
+  // Загружаем популярный контент и жанры при монтировании компонента
   useEffect(() => {
     dispatch(fetchAllPopular(12));
+    dispatch(fetchGenres());
   }, [dispatch]);
 
   // Обработчик изменения поискового запроса
@@ -94,10 +98,33 @@ function Home() {
     }
   };
 
+  const handleGenreChange = (genreName: string) => {
+    setSelectedGenre(genreName);
+    
+    if (genreName === 'Все жанры') {
+      dispatch(setGenre(null));
+      dispatch(setGenreName('Все жанры'));
+    } else {
+      const genre = search.genres.find(g => g.name === genreName);
+      if (genre) {
+        dispatch(setGenre(genre.id));
+        dispatch(setGenreName(genre.name));
+      }
+    }
+    
+    // Если есть поисковый запрос, выполняем новый поиск
+    if (search.query.trim()) {
+      dispatch(resetSearch());
+      dispatch(performSearch({ reset: true }));
+    }
+  };
+
   const handleResetFilters = () => {
     setSelectedTypes(['books', 'users', 'collections']);
     setSelectedGenre('Все жанры');
     dispatch(setTypes(['book', 'user', 'collection']));
+    dispatch(setGenre(null));
+    dispatch(setGenreName('Все жанры'));
     
     // Если есть поисковый запрос, выполняем новый поиск
     if (search.query.trim()) {
@@ -399,6 +426,9 @@ function Home() {
                             search.results.users.length + 
                             search.results.collections.length;
 
+  // Подготавливаем опции жанров для SelectWithSearch
+  const genreOptions = ['Все жанры', ...search.genres.map(genre => genre.name)];
+
   return (
     <main>
       <div className="search-container">
@@ -416,18 +446,26 @@ function Home() {
               selectedTypes={selectedTypes}
               onTypeChange={handleTypeChange}
               selectedGenre={selectedGenre}
-              onGenreChange={setSelectedGenre}
+              onGenreChange={handleGenreChange}
               onReset={handleResetFilters}
+              genres={search.loadingGenres ? ['Загрузка жанров...'] : genreOptions}
+              loadingGenres={search.loadingGenres}
             />
 
             {selectedTypes.length > 0 && (
               <div className="search-results container">
                 <div className="search-results-content">
-                  {search.loading ? (
-                    renderLoadingState()
-                  ) : search.error ? (
+                  {/* Индикатор загрузки поиска */}
+                  {search.loading && (
+                    <div className="search-loading">
+                      <div className="search-spinner"></div>
+                      <p>Поиск...</p>
+                    </div>
+                  )}
+
+                  {!search.loading && search.error ? (
                     renderErrorState(search.error)
-                  ) : hasSearchResults ? (
+                  ) : !search.loading && hasSearchResults ? (
                     <>
                       <div className="results-count">
                         Найдено результатов: {search.total}
@@ -442,13 +480,13 @@ function Home() {
                                 <div>
                                   <p className="search-result-title">{book.title}</p>
                                   <p className="search-result-author">{book.description}</p>
-                                  {/* Добавляем отображение рейтинга */}
+                                  {/* Исправляем отображение рейтинга */}
                                   {book.rating > 0 && (
-                                    <div className="search-result-rating">
-                                      <Stars count={Math.round(book.rating)}/>
-                                      <span className="rating-value">{book.rating.toFixed(1)}</span>
-                                    </div>
-                                  )}
+  <div className="search-result-rating">
+    <Stars count={book.rating} size="small"/>
+    {/* Убираем дублирующий rating-value - он уже внутри компонента Stars */}
+  </div>
+)}
                                 </div>
                               </div>
                               <div className="search-result-actions">
@@ -543,7 +581,7 @@ function Home() {
                         </div>
                       )}
                     </>
-                  ) : localSearchQuery.trim() ? (
+                  ) : localSearchQuery.trim() && !search.loading ? (
                     <div className="no-results-message">
                       По вашему запросу ничего не найдено
                     </div>
@@ -566,21 +604,22 @@ function Home() {
           <HorizontalSlider>
             {topBooks.map((book) => (
               <CardElement
-                key={book.id}
-                title={book.title}
-                description={book.description}
-                starsCount={book.rating}
-                imageUrl={book.cover}
-                button={true}
-                buttonLabel={"Добавить в вишлист"}
-                onClick={() => handleBookClick(book)}
-                buttonIconUrl={AddIcon}
-                buttonChanged={true}
-                buttonChangedIconUrl={Delete}
-                buttonChangedLabel={"Удалить из вишлиста"}
-                isAuthenticated={isAuthenticated}
-                onUnauthorized={() => setShowLoginModal(true)}
-              />
+  key={book.id}
+  title={book.title}
+  description={book.description}
+  starsCount={book.rating}
+  imageUrl={book.cover}
+  button={true}
+  buttonLabel={"Добавить в вишлист"}
+  onClick={() => handleBookClick(book)}
+  buttonIconUrl={AddIcon}
+  buttonChanged={true}
+  buttonChangedIconUrl={Delete}
+  buttonChangedLabel={"Удалить из вишлиста"}
+  isAuthenticated={isAuthenticated}
+  onUnauthorized={() => setShowLoginModal(true)}
+  starsSize="small" // Добавляем явное указание размера
+/>
             ))}
           </HorizontalSlider>
         ) : (

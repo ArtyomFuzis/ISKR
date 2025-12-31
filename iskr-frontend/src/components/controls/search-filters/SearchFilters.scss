@@ -63,5 +63,11 @@
 
   .filter-genre {
     min-width: 200px;
+    
+    .loading-genres {
+      font-size: 0.8rem;
+      color: rgba(255, 255, 255, 0.5);
+      margin-top: 0.25rem;
+    }
   }
 }

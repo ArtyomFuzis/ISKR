@@ -4,11 +4,13 @@ import NullStar from "../../assets/elements/null-star.svg";
 import './Stars.scss';
 
 interface StarsProps {
-  count: number; // теперь принимает дробные значения от 0 до 5
+  count: number;
   onChange?: (count: number) => void;
+  size?: 'small' | 'medium' | 'large';
+  showValue?: boolean; // Добавляем пропс для управления отображением значения
 }
 
-function Stars({ count, onChange }: StarsProps) {
+function Stars({ count, onChange, size = 'medium', showValue = true }: StarsProps) {
   // Округляем до ближайшего 0.5 для отображения
   const roundedCount = Math.round(count * 2) / 2;
   
@@ -33,7 +35,7 @@ function Stars({ count, onChange }: StarsProps) {
 
     return (
       <div
-        className={`star ${isClickable ? 'clickable' : ''}`}
+        className={`star ${size} ${isClickable ? 'clickable' : ''}`}
         onClick={() => isClickable && handleStarClick(position)}
         key={position}
       >
@@ -45,8 +47,11 @@ function Stars({ count, onChange }: StarsProps) {
   return (
     <div className="stars-container">
       {[1, 2, 3, 4, 5].map(renderStar)}
-      {/* Дополнительно можно отображать числовое значение рейтинга */}
-      <span className="rating-value">{count.toFixed(1)}</span>
+      {showValue && (
+        <span className="rating-value" style={{ marginLeft: '4px' }}>
+          {count.toFixed(1)}
+        </span>
+      )}
     </div>
   );
 }
