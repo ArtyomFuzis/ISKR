@@ -46,6 +46,58 @@ public class BooksCommonRoutes extends RouteBuilder {
                 .setHeader("X-Service", constant("Books"))
                 .setHeader("X-Service-Request", simple("api/v1/popular/books"))
                 .to("direct:sd-call-finalize");
+
+        from("platform-http:/oapi/v1/user?httpMethodRestrict=GET")
+                .routeId("user-books-route")
+                .onException(ServiceFall.class)
+                    .handled(true)
+                    .to("direct:service-error-handler")
+                .end()
+                .setHeader("X-Headers-Required", constant("userId"))
+                .to("direct:check-params")
+                .setHeader(Exchange.HTTP_METHOD, constant("GET"))
+                .setHeader("X-Service", constant("Books"))
+                .setHeader("X-Service-Request", simple("api/v1/users/${header.userId}"))
+                .to("direct:sd-call-finalize");
+
+        from("platform-http:/oapi/v1/user/subscribers?httpMethodRestrict=GET")
+                .routeId("user-books-subscribers-route")
+                .onException(ServiceFall.class)
+                    .handled(true)
+                    .to("direct:service-error-handler")
+                .end()
+                .setHeader("X-Headers-Required", constant("userId"))
+                .to("direct:check-params")
+                .setHeader(Exchange.HTTP_METHOD, constant("GET"))
+                .setHeader("X-Service", constant("Books"))
+                .setHeader("X-Service-Request", simple("api/v1/users/${header.userId}/subscribers"))
+                .to("direct:sd-call-finalize");
+
+        from("platform-http:/oapi/v1/user/subscriptions?httpMethodRestrict=GET")
+                .routeId("user-books-subscriptions-route")
+                .onException(ServiceFall.class)
+                    .handled(true)
+                    .to("direct:service-error-handler")
+                .end()
+                .setHeader("X-Headers-Required", constant("userId"))
+                .to("direct:check-params")
+                .setHeader(Exchange.HTTP_METHOD, constant("GET"))
+                .setHeader("X-Service", constant("Books"))
+                .setHeader("X-Service-Request", simple("api/v1/users/${header.userId}/subscriptions"))
+                .to("direct:sd-call-finalize");
+
+        from("platform-http:/oapi/v1/user/collections?httpMethodRestrict=GET")
+                .routeId("user-books-collections-route")
+                .onException(ServiceFall.class)
+                .handled(true)
+                .to("direct:service-error-handler")
+                .end()
+                .setHeader("X-Headers-Required", constant("userId"))
+                .to("direct:check-params")
+                .setHeader(Exchange.HTTP_METHOD, constant("GET"))
+                .setHeader("X-Service", constant("Books"))
+                .setHeader("X-Service-Request", simple("api/v1/users/${header.userId}/collections"))
+                .to("direct:sd-call-finalize");
     }
 }
 

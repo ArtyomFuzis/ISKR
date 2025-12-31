@@ -263,10 +263,14 @@ function Home() {
 
   // Преобразование данных из API в формат для компонентов - ПОЛЬЗОВАТЕЛИ (популярные)
   const topUsers = popular.users.map((user: User) => {
+    // Используем никнейм для отображения, если он есть, иначе username
+    const displayName = user.nickname || user.username;
+
     return {
       id: user.userId,
       username: user.username,
       nickname: user.nickname,
+      displayName: displayName, // Добавляем поле для отображения
       followers: user.subscribersCount.toString(),
       avatar: getUserImageUrl(user) || PlaceholderImage,
     };
@@ -274,10 +278,14 @@ function Home() {
 
   // Преобразование данных поиска - ПОЛЬЗОВАТЕЛИ
   const searchUsers = search.results.users.map((user: User) => {
+    // Используем никнейм для отображения, если он есть, иначе username
+    const displayName = user.nickname || user.username;
+
     return {
       id: user.userId,
       username: user.username,
       nickname: user.nickname,
+      displayName: displayName, // Добавляем поле для отображения
       followers: user.subscribersCount.toString(),
       avatar: getUserImageUrl(user) || PlaceholderImage,
     };
@@ -347,6 +355,8 @@ function Home() {
     navigate('/profile', {
       state: {
         username: user.username,
+        nickname: user.nickname,
+        displayName: user.displayName,
         subscribersCount: parseInt(user.followers.replace(/\s/g, '')),
         avatarUrl: user.avatar
       }
@@ -372,6 +382,8 @@ function Home() {
     navigate('/profile', {
       state: {
         username: user.username,
+        nickname: user.nickname,
+        displayName: user.displayName,
         subscribersCount: parseInt(user.followers.replace(/\s/g, '')),
         avatarUrl: user.avatar
       }
@@ -482,11 +494,10 @@ function Home() {
                                   <p className="search-result-author">{book.description}</p>
                                   {/* Исправляем отображение рейтинга */}
                                   {book.rating > 0 && (
-  <div className="search-result-rating">
-    <Stars count={book.rating} size="small"/>
-    {/* Убираем дублирующий rating-value - он уже внутри компонента Stars */}
-  </div>
-)}
+                                    <div className="search-result-rating">
+                                      <Stars count={book.rating} size="small"/>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                               <div className="search-result-actions">
@@ -520,7 +531,8 @@ function Home() {
                                 <div className="search-result-info" onClick={() => handleSearchUserClick(user)} style={{ cursor: 'pointer' }}>
                                   <img src={user.avatar} alt="User avatar"/>
                                   <div>
-                                    <p className="search-result-title">{user.username}</p>
+                                    {/* Используем displayName (никнейм) для отображения */}
+                                    <p className="search-result-title">{user.displayName}</p>
                                     <p className="search-result-author">{formattedCount} подписчиков</p>
                                   </div>
                                 </div>
@@ -604,22 +616,22 @@ function Home() {
           <HorizontalSlider>
             {topBooks.map((book) => (
               <CardElement
-  key={book.id}
-  title={book.title}
-  description={book.description}
-  starsCount={book.rating}
-  imageUrl={book.cover}
-  button={true}
-  buttonLabel={"Добавить в вишлист"}
-  onClick={() => handleBookClick(book)}
-  buttonIconUrl={AddIcon}
-  buttonChanged={true}
-  buttonChangedIconUrl={Delete}
-  buttonChangedLabel={"Удалить из вишлиста"}
-  isAuthenticated={isAuthenticated}
-  onUnauthorized={() => setShowLoginModal(true)}
-  starsSize="small" // Добавляем явное указание размера
-/>
+                key={book.id}
+                title={book.title}
+                description={book.description}
+                starsCount={book.rating}
+                imageUrl={book.cover}
+                button={true}
+                buttonLabel={"Добавить в вишлист"}
+                onClick={() => handleBookClick(book)}
+                buttonIconUrl={AddIcon}
+                buttonChanged={true}
+                buttonChangedIconUrl={Delete}
+                buttonChangedLabel={"Удалить из вишлиста"}
+                isAuthenticated={isAuthenticated}
+                onUnauthorized={() => setShowLoginModal(true)}
+                starsSize="small"
+              />
             ))}
           </HorizontalSlider>
         ) : (
@@ -672,7 +684,7 @@ function Home() {
             {topUsers.map((user) => (
               <CardElement
                 key={user.id}
-                title={user.username}
+                title={user.displayName} 
                 description={`${parseInt(user.followers).toLocaleString('ru-RU')} ${russianLocalWordConverter(
                   parseInt(user.followers),
                   'подписчик',

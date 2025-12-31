@@ -1,6 +1,8 @@
 package com.fuzis.booksbackend.repository;
 
 import com.fuzis.booksbackend.entity.BookCollection;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -15,4 +17,10 @@ public interface BookCollectionRepository extends JpaRepository<BookCollection, 
 
     @Query("SELECT bc FROM BookCollection bc LEFT JOIN FETCH bc.photoLink WHERE bc.bcolsId IN :ids")
     List<BookCollection> findByIdsWithPhotoLinks(@Param("ids") List<Integer> ids);
+
+    // Получение коллекций пользователя с пагинацией
+    Page<BookCollection> findByOwner_UserId(Integer userId, Pageable pageable);
+
+    // Подсчет количества коллекций пользователя
+    long countByOwner_UserId(Integer userId);
 }
