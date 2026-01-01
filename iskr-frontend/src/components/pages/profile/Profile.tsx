@@ -55,9 +55,9 @@ function Profile() {
         // Загружаем все данные параллельно
         const [profileData, subscribersData, subscriptionsData, collectionsData] = await Promise.all([
           profileAPI.getUserProfile(userId),
-          profileAPI.getUserSubscribers(userId, 4, 0),
-          profileAPI.getUserSubscriptions(userId, 4, 0),
-          profileAPI.getUserCollections(userId, 4, 0)
+          profileAPI.getUserSubscribers(userId, 6, 0), // Изменено: 6 подписчиков
+          profileAPI.getUserSubscriptions(userId, 6, 0), // Изменено: 6 подписок
+          profileAPI.getUserCollections(userId, 4, 0) // Осталось: 4 коллекции
         ]);
 
         setProfile(profileData);
@@ -102,22 +102,22 @@ function Profile() {
   };
 
   const handleSubscriberClick = () => {
-  navigate('/followers', {
-    state: {
-      userId: profile.userId, // Передаем userId профиля
-      isMine: false
-    }
-  });
-};
+    navigate('/followers', {
+      state: {
+        userId: profile?.userId,
+        isMine: false
+      }
+    });
+  };
 
-const handleSubscriptionsClick = () => {
-  navigate('/subscriptions', {
-    state: {
-      userId: profile.userId, // Передаем userId профиля
-      isMine: false
-    }
-  });
-};
+  const handleSubscriptionsClick = () => {
+    navigate('/subscriptions', {
+      state: {
+        userId: profile?.userId,
+        isMine: false
+      }
+    });
+  };
 
   const handleCollectionClick = (collection: ProfileCollection) => {
     navigate('/collection', {
