@@ -116,7 +116,7 @@ public class UserService {
                     .map(Subscriber::getSubsUser)
                     .collect(Collectors.toList());
 
-            // Преобразуем в DTO
+            // Преобразуем в DTO с подсчетом подписчиков для каждого пользователя
             List<UserSubscriptionDTO> subscriberDTOs = convertUsersToSubscriptionDTOs(subscribers);
 
             Map<String, Object> response = new HashMap<>();
@@ -161,7 +161,7 @@ public class UserService {
                     .map(Subscriber::getSubsUserOn)
                     .collect(Collectors.toList());
 
-            // Преобразуем в DTO
+            // Преобразуем в DTO с подсчетом подписчиков для каждого пользователя
             List<UserSubscriptionDTO> subscriptionDTOs = convertUsersToSubscriptionDTOs(subscriptions);
 
             Map<String, Object> response = new HashMap<>();
@@ -184,6 +184,77 @@ public class UserService {
             log.error("Error retrieving subscriptions for user {}: ", userId, e);
             return new ChangeDTO<>(State.Fail, "Error retrieving subscriptions: " + e.getMessage(), null);
         }
+    }
+
+    private List<UserSubscriptionDTO> convertUsersToSubscriptionDTOs(List<User> users) {
+        if (users.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        // Собираем ID пользователей
+        List<Integer> userIds = users.stream().map(User::getUserId).collect(Collectors.toList());
+
+        // Загружаем пользователей с профилями
+        List<User> usersWithProfiles = userRepository.findByIdsWithProfiles(userIds);
+
+        // Собираем ID изображений
+        List<Integer> imageIds = usersWithProfiles.stream()
+                .map(u -> u.getProfile() != null ? u.getProfile().getUserImglId() : null)
+                .filter(Objects::nonNull)
+                .map(ImageLink::getImglId)
+                .collect(Collectors.toList());
+
+        // Загружаем изображения с данными
+        Map<Integer, ImageLink> imageLinksMap;
+        if (!imageIds.isEmpty()) {
+            List<ImageLink> imageLinks = imageLinkRepository.findByIdsWithImageData(imageIds);
+            imageLinksMap = imageLinks.stream()
+                    .collect(Collectors.toMap(ImageLink::getImglId, il -> il));
+        } else {
+            imageLinksMap = new HashMap<>();
+        }
+
+        // Получаем количество подписчиков для каждого пользователя
+        Map<Integer, Long> subscribersCountMap = getSubscribersCountForUsers(userIds);
+
+        // Преобразуем в DTO
+        return usersWithProfiles.stream()
+                .map(user -> {
+                    UserSubscriptionDTO dto = new UserSubscriptionDTO();
+                    dto.setUserId(user.getUserId());
+                    dto.setUsername(user.getUsername());
+
+                    if (user.getProfile() != null) {
+                        dto.setNickname(user.getProfile().getNickname());
+
+                        // Загружаем изображение профиля
+                        ImageLink profileImageLink = user.getProfile().getUserImglId();
+                        if (profileImageLink != null) {
+                            ImageLink fullImageLink = imageLinksMap.get(profileImageLink.getImglId());
+                            if (fullImageLink != null && fullImageLink.getImageData() != null) {
+                                ImageData imageData = fullImageLink.getImageData();
+                                ImageDataDTO imageDataDTO = new ImageDataDTO(
+                                        imageData.getImgdId(),
+                                        imageData.getUuid(),
+                                        imageData.getSize(),
+                                        imageData.getMimeType(),
+                                        imageData.getExtension()
+                                );
+                                ImageLinkDTO imageLinkDTO = new ImageLinkDTO(
+                                        fullImageLink.getImglId(),
+                                        imageDataDTO
+                                );
+                                dto.setProfileImage(imageLinkDTO);
+                            }
+                        }
+                    }
+
+                    // Устанавливаем количество подписчиков
+                    dto.setSubscribersCount(subscribersCountMap.getOrDefault(user.getUserId(), 0L));
+
+                    return dto;
+                })
+                .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
@@ -292,68 +363,24 @@ public class UserService {
         }
     }
 
-    private List<UserSubscriptionDTO> convertUsersToSubscriptionDTOs(List<User> users) {
-        if (users.isEmpty()) {
-            return new ArrayList<>();
+    private Map<Integer, Long> getSubscribersCountForUsers(List<Integer> userIds) {
+        if (userIds.isEmpty()) {
+            return new HashMap<>();
         }
 
-        // Собираем ID пользователей
-        List<Integer> userIds = users.stream().map(User::getUserId).collect(Collectors.toList());
+        // Используем новый метод для массового получения количества подписчиков
+        List<Object[]> results = subscriberRepository.findSubscribersCountByUserIds(userIds);
 
-        // Загружаем пользователей с профилями
-        List<User> usersWithProfiles = userRepository.findByIdsWithProfiles(userIds);
+        // Создаем мапу userId -> subscribersCount
+        Map<Integer, Long> subscribersCountMap = results.stream()
+                .collect(Collectors.toMap(
+                        row -> (Integer) row[0],
+                        row -> (Long) row[1]
+                ));
 
-        // Собираем ID изображений
-        List<Integer> imageIds = usersWithProfiles.stream()
-                .map(u -> u.getProfile() != null ? u.getProfile().getUserImglId() : null)
-                .filter(Objects::nonNull)
-                .map(ImageLink::getImglId)
-                .collect(Collectors.toList());
+        // Для пользователей без подписчиков устанавливаем 0
+        userIds.forEach(userId -> subscribersCountMap.putIfAbsent(userId, 0L));
 
-        // Загружаем изображения с данными
-        Map<Integer, ImageLink> imageLinksMap;
-        if (!imageIds.isEmpty()) {
-            List<ImageLink> imageLinks = imageLinkRepository.findByIdsWithImageData(imageIds);
-            imageLinksMap = imageLinks.stream()
-                    .collect(Collectors.toMap(ImageLink::getImglId, il -> il));
-        } else {
-            imageLinksMap = new HashMap<>();
-        }
-
-        // Преобразуем в DTO
-        return usersWithProfiles.stream()
-                .map(user -> {
-                    UserSubscriptionDTO dto = new UserSubscriptionDTO();
-                    dto.setUserId(user.getUserId());
-                    dto.setUsername(user.getUsername());
-
-                    if (user.getProfile() != null) {
-                        dto.setNickname(user.getProfile().getNickname());
-
-                        // Загружаем изображение профиля
-                        ImageLink profileImageLink = user.getProfile().getUserImglId();
-                        if (profileImageLink != null) {
-                            ImageLink fullImageLink = imageLinksMap.get(profileImageLink.getImglId());
-                            if (fullImageLink != null && fullImageLink.getImageData() != null) {
-                                ImageData imageData = fullImageLink.getImageData();
-                                ImageDataDTO imageDataDTO = new ImageDataDTO(
-                                        imageData.getImgdId(),
-                                        imageData.getUuid(),
-                                        imageData.getSize(),
-                                        imageData.getMimeType(),
-                                        imageData.getExtension()
-                                );
-                                ImageLinkDTO imageLinkDTO = new ImageLinkDTO(
-                                        fullImageLink.getImglId(),
-                                        imageDataDTO
-                                );
-                                dto.setProfileImage(imageLinkDTO);
-                            }
-                        }
-                    }
-
-                    return dto;
-                })
-                .collect(Collectors.toList());
+        return subscribersCountMap;
     }
 }

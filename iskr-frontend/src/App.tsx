@@ -14,7 +14,7 @@ import Account from "./components/pages/account/Account.tsx";
 import Followers from "./components/pages/followers/Followers.tsx";
 import Subscriptions from "./components/pages/subscriptions/Subscriptions.tsx";
 import ResetPasswordPage from "./components/pages/reset-password/ResetPasswordPage.tsx";
-import ValidateEmailPage from "./components/pages/validate-email/ValidateEmailPage.tsx"; // Новый импорт
+import ValidateEmailPage from "./components/pages/validate-email/ValidateEmailPage.tsx";
 
 // Компонент-обертка для передачи состояния в Header
 function AppWrapper() {
@@ -22,7 +22,6 @@ function AppWrapper() {
   const isAuthenticated = useSelector((state: RootState) => state.auth.isAuthenticated);
   const user = useSelector((state: RootState) => state.auth.user);
 
-  // Используем location.state для передачи данных между маршрутами
   const showLoginModal = location.state?.showLoginModal || false;
 
   return (
@@ -40,7 +39,7 @@ function AppWrapper() {
         <Route path="/followers" element={<Followers />} />
         <Route path="/subscriptions" element={<Subscriptions />} />
         <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
-        <Route path="/validate-email/:token" element={<ValidateEmailPage />} /> {/* Новый маршрут */}
+        <Route path="/validate-email/:token" element={<ValidateEmailPage />} />
       </Routes>
     </>
   );

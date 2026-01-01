@@ -38,4 +38,11 @@ public interface SubscriberRepository extends JpaRepository<Subscriber, Integer>
             "GROUP BY s.subsUserOn.userId " +
             "ORDER BY subscriberCount DESC")
     List<Object[]> findPopularUsers();
+
+    // Новый метод для получения количества подписчиков для нескольких пользователей
+    @Query("SELECT s.subsUserOn.userId, COUNT(s) " +
+            "FROM Subscriber s " +
+            "WHERE s.subsUserOn.userId IN :userIds " +
+            "GROUP BY s.subsUserOn.userId")
+    List<Object[]> findSubscribersCountByUserIds(@Param("userIds") List<Integer> userIds);
 }

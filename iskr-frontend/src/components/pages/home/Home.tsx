@@ -352,16 +352,12 @@ function Home() {
   };
 
   const handleUserClick = (user: typeof topUsers[0]) => {
-    navigate('/profile', {
-      state: {
-        username: user.username,
-        nickname: user.nickname,
-        displayName: user.displayName,
-        subscribersCount: parseInt(user.followers.replace(/\s/g, '')),
-        avatarUrl: user.avatar
-      }
-    });
-  };
+  navigate('/profile', {
+    state: {
+      userId: user.id // Передаем userId вместо старых данных
+    }
+  });
+};
 
   const handleSearchBookClick = (book: typeof searchBooks[0]) => {
     navigate('/book', {
@@ -379,16 +375,12 @@ function Home() {
   };
 
   const handleSearchUserClick = (user: typeof searchUsers[0]) => {
-    navigate('/profile', {
-      state: {
-        username: user.username,
-        nickname: user.nickname,
-        displayName: user.displayName,
-        subscribersCount: parseInt(user.followers.replace(/\s/g, '')),
-        avatarUrl: user.avatar
-      }
-    });
-  };
+  navigate('/profile', {
+    state: {
+      userId: user.id // Передаем userId вместо старых данных
+    }
+  });
+};
 
   const handleSearchCollectionClick = (collection: typeof searchCollections[0]) => {
     navigate('/collection', {

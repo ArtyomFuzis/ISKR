@@ -51,8 +51,12 @@ export const getBookImageUrl = (book: Book): string | null => {
 };
 
 // ОБНОВЛЕННАЯ ФУНКЦИЯ: Получение URL изображения пользователя
-export const getUserImageUrl = (user: User): string | null => {
-  // Сначала проверяем данные из поиска (imageUuid/imageExtension)
+export const getUserImageUrl = (user: any): string | null => {
+  // Если это объект с profileImage (из профиля)
+  if (user.profileImage) {
+    return getImageUrl(user.profileImage);
+  }
+  // Если это объект User из popular/types
   if (user.profileImage) {
     return getImageUrl(user.profileImage);
   }

@@ -1,10 +1,10 @@
 import PrimaryButton from "../../controls/primary-button/PrimaryButton.tsx";
 import CardElement from "../../controls/card-element/CardElement.tsx";
 import AddIcon from "../../../assets/elements/add.svg";
-import {useLocation, useNavigate} from "react-router-dom";
+import {useLocation, useNavigate, Navigate} from "react-router-dom";
 import VerticalAccordion from "../../controls/vertical-accordion/VerticalAccordion.tsx";
 import Delete from "../../../assets/elements/delete.svg";
-import {useState} from "react";
+import {useState, useEffect} from "react";
 import type {RootState} from "../../../redux/store.ts";
 import {useSelector} from "react-redux";
 import Login from "../../controls/login/Login.tsx";
@@ -12,45 +12,72 @@ import Modal from "../../controls/modal/Modal.tsx";
 import './Profile.scss';
 import {russianLocalWordConverter} from "../../../utils/russianLocalWordConverter.ts";
 import SecondaryButton from "../../controls/secondary-button/SecondaryButton.tsx";
-import ClassicCover from "../../../assets/images/collections/classic.jpg";
-import FantasticCover from "../../../assets/images/collections/fantastic.jpg";
-import DetectiveCover from "../../../assets/images/collections/detective.jpg";
-import PhilosophyCover from "../../../assets/images/collections/philosophy.jpg";
-import RomanceCover from "../../../assets/images/collections/romance.avif";
-import TriTovarischaCover from "../../../assets/images/books/tri-tovarischa.jpg";
-import MasterIMargheritaCover from "../../../assets/images/books/master-i-margarita.jpg";
-import OrwellCover from "../../../assets/images/books/1984.jpg";
-import PrestuplenieINakazanieCover from "../../../assets/images/books/prestuplenie-i-nakazanie.jpg";
-import VoinaIMirCover from "../../../assets/images/books/voina-i-mir.jpg";
-import GrafMonteCristoCover from "../../../assets/images/books/graf-monte-kristo.jpg";
-import Avatar1 from "../../../assets/images/users/avatar1.jpg";
-import Avatar2 from "../../../assets/images/users/avatar2.jpg";
-import Avatar3 from "../../../assets/images/users/avatar3.jpg";
-import Avatar4 from "../../../assets/images/users/avatar4.jpg";
-import Avatar5 from "../../../assets/images/users/avatar5.jpg";
-import Avatar6 from "../../../assets/images/users/avatar6.jpg";
-import Avatar12 from "../../../assets/images/users/avatar12.jpg";
+import PlaceholderImage from '../../../assets/images/placeholder.jpg';
+import profileAPI from '../../../api/profileService';
+import type { ProfileUser, ProfileCollection, UserSubscription } from '../../../types/profile';
+import { getImageUrl, getCollectionImageUrl } from '../../../api/popularService';
 
 function Profile() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  
+  // Получаем userId из state или из location.state (для обратной совместимости)
+  const userId = location.state?.userId || location.state?.id;
+  
+  // Если userId нет - редирект на главную
+  if (!userId) {
+    return <Navigate to="/" replace />;
+  }
+
   const isAuthenticated = useSelector((state: RootState) => state.auth.isAuthenticated);
   const [showLoginModal, setShowLoginModal] = useState(false);
 
-  const location = useLocation();
-  const {username, subscribersCount, avatarUrl} = location.state || {
-    username: 'user',
-    subscribersCount: 0,
-    avatarUrl: undefined
-  };
-
-  const isNewUser = username === 'newuser';
-
+  // Состояния для данных
+  const [profile, setProfile] = useState<ProfileUser | null>(null);
+  const [subscribers, setSubscribers] = useState<UserSubscription[]>([]);
+  const [subscriptions, setSubscriptions] = useState<UserSubscription[]>([]);
+  const [collections, setCollections] = useState<ProfileCollection[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [isSubscribed, setIsSubscribed] = useState(false);
-  const [currentSubscribersCount, setCurrentSubscribersCount] = useState(isNewUser ? 0 : subscribersCount);
+  const [currentSubscribersCount, setCurrentSubscribersCount] = useState(0);
 
+  // Загрузка данных профиля
+  useEffect(() => {
+    const loadProfileData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Загружаем все данные параллельно
+        const [profileData, subscribersData, subscriptionsData, collectionsData] = await Promise.all([
+          profileAPI.getUserProfile(userId),
+          profileAPI.getUserSubscribers(userId, 4, 0),
+          profileAPI.getUserSubscriptions(userId, 4, 0),
+          profileAPI.getUserCollections(userId, 4, 0)
+        ]);
+
+        setProfile(profileData);
+        setCurrentSubscribersCount(profileData.subscribersCount || 0);
+        setSubscribers(subscribersData);
+        setSubscriptions(subscriptionsData);
+        setCollections(collectionsData);
+      } catch (err: any) {
+        console.error('Error loading profile:', err);
+        setError(err.message || 'Ошибка загрузки профиля');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProfileData();
+  }, [userId]);
+
+  // Обработчики
   const handleSubscribeProfile = () => {
     setIsSubscribed(!isSubscribed);
-    setCurrentSubscribersCount((prev: number) => isSubscribed ? prev - 1 : prev + 1);
-  }
+    setCurrentSubscribersCount(prev => isSubscribed ? prev - 1 : prev + 1);
+  };
 
   const getFormattedSubscribersCount = (): string => {
     return currentSubscribersCount.toLocaleString('ru-RU').replace(/,/g, ' ');
@@ -60,34 +87,10 @@ function Profile() {
     return russianLocalWordConverter(count, 'подписчик', 'подписчика', 'подписчиков', 'подписчиков');
   };
 
-  const collections = isNewUser ? [] : [
-    {id: '1', title: "Классика", booksCount: 30, imageUrl: ClassicCover},
-    {id: '2', title: "Фантастика", booksCount: 13, imageUrl: FantasticCover},
-    {id: '3', title: "Детективы", booksCount: 7, imageUrl: DetectiveCover},
-    {id: '4', title: "Философия", booksCount: 27, imageUrl: PhilosophyCover},
-    {id: '5', title: "Романтика", booksCount: 24, imageUrl: RomanceCover},
-  ];
-
-  const displayedFollowers = isNewUser ? [] : [
-    {id: 1, username: "ghost_67", avatar: Avatar1, followersCount: "12567"},
-    {id: 2, username: "book_lover", avatar: Avatar2, followersCount: "8234"},
-    {id: 3, username: "reader_pro", avatar: Avatar3, followersCount: "15890"},
-    {id: 4, username: "lit_critic", avatar: Avatar4, followersCount: "6543"}
-  ];
-
-  const displayedSubscriptions = isNewUser ? [] : [
-    {id: 9, username: "novel_ninja", avatar: Avatar4, followersCount: "10123"},
-    {id: 10, username: "verse_master", avatar: Avatar5, followersCount: "14567"},
-    {id: 11, username: "plot_hunter", avatar: Avatar6, followersCount: "8901"},
-    {id: 12, username: "genre_guru", avatar: Avatar12, followersCount: "12345"}
-  ];
-
-  const handleFollowerClick = (followerUsername: string, followerAvatar: string, followerFollowersCount: string) => {
+  const handleFollowerClick = (follower: UserSubscription) => {
     navigate('/profile', {
       state: {
-        username: followerUsername,
-        subscribersCount: parseInt(followerFollowersCount),
-        avatarUrl: followerAvatar
+        userId: follower.userId
       }
     });
   };
@@ -95,7 +98,7 @@ function Profile() {
   const handleSubscriberClick = () => {
     navigate('/followers', {
       state: {
-        username,
+        userId,
         isMine: false
       }
     });
@@ -104,40 +107,86 @@ function Profile() {
   const handleSubscriptionsClick = () => {
     navigate('/subscriptions', {
       state: {
-        username,
+        userId,
         isMine: false
       }
     });
   };
 
-  const books = [
-    {id: 1, title: "Три товарища", author: "Эрих Мария Ремарк", rating: 4.5, cover: TriTovarischaCover},
-    {id: 2, title: "Мастер и Маргарита", author: "Михаил Булгаков", rating: 4.8, cover: MasterIMargheritaCover},
-    {id: 3, title: "1984", author: "Джордж Оруэлл", rating: 4.6, cover: OrwellCover},
-    {id: 4, title: "Преступление и наказание", author: "Фёдор Достоевский", rating: 4.7, cover: PrestuplenieINakazanieCover},
-    {id: 5, title: "Война и мир", author: "Лев Толстой", rating: 4.9, cover: VoinaIMirCover},
-    {id: 6, title: "Граф Монте-Кристо", author: "Александр Дюма", rating: 4.8, cover: GrafMonteCristoCover}
-  ];
-
-  const navigate = useNavigate();
-
-  const handleCollectionClick = (collection: typeof collections[0]) => {
+  const handleCollectionClick = (collection: ProfileCollection) => {
     navigate('/collection', {
       state: {
-        id: collection.id,
+        id: collection.collectionId,
         name: collection.title,
+        description: collection.description,
         isMine: false,
-        coverUrl: collection.imageUrl,
-        books: books.slice(0, 5).map(book => ({
-          id: String(book.id),
-          title: book.title,
-          author: book.author,
-          rating: book.rating,
-          imageUrl: book.cover
-        }))
+        coverUrl: getCollectionImageUrl(collection as any) || PlaceholderImage,
+        owner: profile?.nickname || profile?.username || 'Пользователь',
+        booksCount: collection.bookCount,
+        likesCount: 0,
+        books: []
       }
     });
   };
+
+  // Получаем URL аватара
+  const getAvatarUrl = (): string => {
+    if (!profile) return PlaceholderImage;
+    
+    const imageUrl = profile.profileImage ? 
+      getImageUrl(profile.profileImage) : 
+      null;
+    
+    return imageUrl || PlaceholderImage;
+  };
+
+  // Получаем отображаемое имя
+  const getDisplayName = (): string => {
+    if (!profile) return 'Загрузка...';
+    return profile.nickname || profile.username || 'Пользователь';
+  };
+
+  // Рендер состояний загрузки и ошибок
+  const renderLoadingState = () => (
+    <div className="loading-state">
+      <div className="loading-spinner"></div>
+      <p>Загрузка профиля...</p>
+    </div>
+  );
+
+  const renderErrorState = () => (
+    <div className="error-state">
+      <p>Ошибка: {error}</p>
+      <SecondaryButton 
+        label="Вернуться на главную" 
+        onClick={() => navigate('/')}
+      />
+    </div>
+  );
+
+  if (loading) {
+    return (
+      <main>
+        <div className="top-container">
+          {renderLoadingState()}
+        </div>
+      </main>
+    );
+  }
+
+  if (error) {
+    return (
+      <main>
+        <div className="top-container">
+          {renderErrorState()}
+        </div>
+      </main>
+    );
+  }
+
+  if (!profile) {
+    return <Navigate to="/" replace />;
+  }
 
   return (
     <main>
@@ -158,9 +207,9 @@ function Profile() {
         <div className="profile-info container">
           <div className="profile-info-main">
             <div className="profile-info-panel">
-              <span className="profile-info-name">{username}</span>
+              <span className="profile-info-name">{getDisplayName()}</span>
               <div className="profile-avatar-container">
-                <img className="profile-avatar" alt="" src={avatarUrl}/>
+                <img className="profile-avatar" alt="" src={getAvatarUrl()}/>
               </div>
               <div className="profile-info-additional-container">
                 <div className="profile-info-additional clickable" onClick={handleSubscriberClick}>
@@ -168,11 +217,11 @@ function Profile() {
                   <span className="profile-info-sublabel">{getSubscribersWord(currentSubscribersCount)}</span>
                 </div>
                 <div className="profile-info-additional clickable" onClick={handleSubscriptionsClick}>
-                  <span className="profile-info-label">{isNewUser ? '0' : '213'} </span>
+                  <span className="profile-info-label">{(profile.subscriptionsCount || 0).toLocaleString('ru-RU')} </span>
                   <span className="profile-info-sublabel">подписок</span>
                 </div>
                 <div className="profile-info-additional">
-                  <span className="profile-info-label">{isNewUser ? '0' : '5'} </span>
+                  <span className="profile-info-label">{(profile.collectionsCount || 0).toLocaleString('ru-RU')} </span>
                   <span className="profile-info-sublabel">коллекций</span>
                 </div>
               </div>
@@ -181,52 +230,67 @@ function Profile() {
             <div className="profile-info-collections">
               <span className="profile-collections-title">Коллекции</span>
               {collections.length > 0 ? (
-                <VerticalAccordion header={
-                  <div className="profile-collections-header">
-                    {collections.slice(0, 4).map((collection) => (
-                      <div key={collection.id}>
-                        <CardElement
-                          title={collection.title}
-                          description={username}
-                          infoDecoration={`${collection.booksCount} книг`}
-                          imageUrl={collection.imageUrl}
-                          button={true}
-                          buttonLabel={"Добавить в избранное"}
-                          onClick={() => handleCollectionClick(collection)}
-                          buttonIconUrl={AddIcon}
-                          buttonChanged={true}
-                          buttonChangedIconUrl={Delete}
-                          buttonChangedLabel={"Удалить из избранного"}
-                          isAuthenticated={isAuthenticated}
-                          onUnauthorized={() => setShowLoginModal(true)}
-                        />
+                <VerticalAccordion 
+                  header={
+                    <div className="profile-collections-header">
+                      {collections.slice(0, 4).map((collection) => (
+                        <div key={collection.collectionId}>
+                          <CardElement
+                            title={collection.title}
+                            description={getDisplayName()}
+                            infoDecoration={`${collection.bookCount} ${russianLocalWordConverter(
+                              collection.bookCount,
+                              'книга',
+                              'книги',
+                              'книг',
+                              'книг'
+                            )}`}
+                            imageUrl={getCollectionImageUrl(collection as any) || PlaceholderImage}
+                            button={true}
+                            buttonLabel={"Добавить в избранное"}
+                            onClick={() => handleCollectionClick(collection)}
+                            buttonIconUrl={AddIcon}
+                            buttonChanged={true}
+                            buttonChangedIconUrl={Delete}
+                            buttonChangedLabel={"Удалить из избранного"}
+                            isAuthenticated={isAuthenticated}
+                            onUnauthorized={() => setShowLoginModal(true)}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  }
+                  content={
+                    collections.slice(4).length > 0 ? (
+                      <div>
+                        {collections.slice(4).map((collection) => (
+                          <div key={collection.collectionId} onClick={() => handleCollectionClick(collection)}>
+                            <CardElement
+                              title={collection.title}
+                              description={getDisplayName()}
+                              infoDecoration={`${collection.bookCount} ${russianLocalWordConverter(
+                                collection.bookCount,
+                                'книга',
+                                'книги',
+                                'книг',
+                                'книг'
+                              )}`}
+                              imageUrl={getCollectionImageUrl(collection as any) || PlaceholderImage}
+                              button={true}
+                              buttonLabel={"Добавить в избранное"}
+                              buttonIconUrl={AddIcon}
+                              buttonChanged={true}
+                              buttonChangedIconUrl={Delete}
+                              buttonChangedLabel={"Удалить из избранного"}
+                              isAuthenticated={isAuthenticated}
+                              onUnauthorized={() => setShowLoginModal(true)}
+                            />
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                }
-                content={
-                 <div>
-                   {collections.slice(4).map((collection) => (
-                     <div key={collection.id} onClick={() => handleCollectionClick(collection)}>
-                       <CardElement
-                         title={collection.title}
-                         description={username}
-                         infoDecoration={`${collection.booksCount} книг`}
-                         imageUrl={collection.imageUrl}
-                         button={true}
-                         buttonLabel={"Добавить в избранное"}
-                         buttonIconUrl={AddIcon}
-                         buttonChanged={true}
-                         buttonChangedIconUrl={Delete}
-                         buttonChangedLabel={"Удалить из избранного"}
-                         isAuthenticated={isAuthenticated}
-                         onUnauthorized={() => setShowLoginModal(true)}
-                       />
-                     </div>
-                   ))}
-                 </div>
-                }>
-                </VerticalAccordion>
+                    ) : null
+                  }
+                />
               ) : (
                 <p className="no-books-message">У пользователя пока нет коллекций.</p>
               )}
@@ -236,23 +300,23 @@ function Profile() {
           <div className="profile-info-followers">
             <div className="profile-section-header">
               <span className="profile-section-title">Подписчики</span>
-              {!isNewUser && currentSubscribersCount > 0 && (
+              {subscribers.length > 0 && (
                 <SecondaryButton
                   label="Перейти ко всем"
                   onClick={handleSubscriberClick}
                 />
               )}
             </div>
-            {displayedFollowers.length > 0 ? (
+            {subscribers.length > 0 ? (
               <div className="profile-followers-list">
-                {displayedFollowers.map((follower) => (
+                {subscribers.map((subscriber) => (
                   <CardElement
-                    key={follower.id}
-                    title={follower.username}
-                    description={`${follower.followersCount} подписчиков`}
-                    imageUrl={follower.avatar}
+                    key={subscriber.userId}
+                    title={subscriber.nickname || subscriber.username}
+                    description={`${(profile.subscribersCount || 0).toLocaleString('ru-RU')} подписчиков`}
+                    imageUrl={getImageUrl(subscriber.profileImage) || PlaceholderImage}
                     button={false}
-                    onClick={() => handleFollowerClick(follower.username, follower.avatar, follower.followersCount)}
+                    onClick={() => handleFollowerClick(subscriber)}
                   />
                 ))}
               </div>
@@ -264,23 +328,23 @@ function Profile() {
           <div className="profile-info-subscriptions">
             <div className="profile-section-header">
               <span className="profile-section-title">Подписки</span>
-              {!isNewUser && displayedSubscriptions.length > 0 && (
+              {subscriptions.length > 0 && (
                 <SecondaryButton
                   label="Перейти ко всем"
                   onClick={handleSubscriptionsClick}
                 />
               )}
             </div>
-            {displayedSubscriptions.length > 0 ? (
+            {subscriptions.length > 0 ? (
               <div className="profile-subscriptions-list">
-                {displayedSubscriptions.map((subscription) => (
+                {subscriptions.map((subscription) => (
                   <CardElement
-                    key={subscription.id}
-                    title={subscription.username}
-                    description={`${subscription.followersCount} подписчиков`}
-                    imageUrl={subscription.avatar}
+                    key={subscription.userId}
+                    title={subscription.nickname || subscription.username}
+                    description={`${(profile.subscriptionsCount || 0).toLocaleString('ru-RU')} подписчиков`}
+                    imageUrl={getImageUrl(subscription.profileImage) || PlaceholderImage}
                     button={false}
-                    onClick={() => handleFollowerClick(subscription.username, subscription.avatar, subscription.followersCount)}
+                    onClick={() => handleFollowerClick(subscription)}
                   />
                 ))}
               </div>
