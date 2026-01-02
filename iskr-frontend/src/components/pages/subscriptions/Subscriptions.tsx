@@ -2,7 +2,7 @@ import './Subscriptions.scss';
 import CardElement from "../../controls/card-element/CardElement.tsx";
 import Delete from "../../../assets/elements/delete.svg";
 import {useLocation, useNavigate, Navigate} from "react-router-dom";
-import {useState, useEffect} from "react";
+import {useState, useEffect, useCallback} from "react";
 import {useSelector} from "react-redux";
 import type {RootState} from "../../../redux/store.ts";
 import Modal from "../../controls/modal/Modal.tsx";
@@ -31,7 +31,7 @@ function Subscriptions() {
   }
 
   const isAuthenticated = useSelector((state: RootState) => state.auth.isAuthenticated);
-  const [userFollowStates, setUserFollowStates] = useState<Record<number, boolean>>({});
+  const currentUser = useSelector((state: RootState) => state.auth.user);
   const [showLoginModal, setShowLoginModal] = useState(false);
   
   // Состояния для данных
@@ -42,27 +42,61 @@ function Subscriptions() {
   // Состояния для модалки отписки
   const [showUnsubscribeModal, setShowUnsubscribeModal] = useState(false);
   const [selectedSubscriptionId, setSelectedSubscriptionId] = useState<number | null>(null);
+  const [unsubscribeLoading, setUnsubscribeLoading] = useState(false);
+
+  // Состояния для подписки/отписки на пользователей (для режима !isMine)
+  const [subscriptionStates, setSubscriptionStates] = useState<Record<number, boolean>>({});
+  const [subscriptionCounts, setSubscriptionCounts] = useState<Record<number, number>>({});
 
   // Загрузка подписок - загружаем всех сразу (большой batch)
-  useEffect(() => {
-    const loadSubscriptions = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        // Загружаем все подписки сразу (1000 - большое число чтобы охватить всех)
-        const subscriptionsData = await profileAPI.getUserSubscriptions(userId, 1000, 0);
-        setSubscriptions(subscriptionsData);
-      } catch (err: any) {
-        console.error('Error loading subscriptions:', err);
-        setError(err.message || 'Ошибка загрузки подписок');
-      } finally {
-        setLoading(false);
-      }
-    };
+  const loadSubscriptions = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Загружаем все подписки сразу (1000 - большое число чтобы охватить всех)
+      const subscriptionsData = await profileAPI.getUserSubscriptions(userId, 1000, 0);
+      setSubscriptions(subscriptionsData);
 
+      // Если это не мой профиль и я авторизован, проверяем свои подписки на этих пользователей
+      if (isAuthenticated && currentUser && !isMine) {
+        const subscriptionPromises = subscriptionsData.map(async (subscription) => {
+          try {
+            const isSubscribed = await profileAPI.checkSubscription(subscription.userId);
+            return { userId: subscription.userId, isSubscribed };
+          } catch (err) {
+            console.error(`Error checking subscription for user ${subscription.userId}:`, err);
+            return { userId: subscription.userId, isSubscribed: false };
+          }
+        });
+
+        const results = await Promise.all(subscriptionPromises);
+        
+        const newStates: Record<number, boolean> = {};
+        const newCounts: Record<number, number> = {};
+        
+        results.forEach(result => {
+          newStates[result.userId] = result.isSubscribed;
+        });
+
+        subscriptionsData.forEach(subscription => {
+          newCounts[subscription.userId] = subscription.subscribersCount || 0;
+        });
+
+        setSubscriptionStates(newStates);
+        setSubscriptionCounts(newCounts);
+      }
+    } catch (err: any) {
+      console.error('Error loading subscriptions:', err);
+      setError(err.message || 'Ошибка загрузки подписок');
+    } finally {
+      setLoading(false);
+    }
+  }, [userId, isAuthenticated, currentUser, isMine]);
+
+  useEffect(() => {
     loadSubscriptions();
-  }, [userId]);
+  }, [loadSubscriptions]);
 
   // Загрузка профиля для получения username (для заголовка)
   const [profile, setProfile] = useState<{ displayName: string } | null>(null);
@@ -100,41 +134,119 @@ function Subscriptions() {
     setShowUnsubscribeModal(true);
   };
 
-  const confirmUnsubscribe = () => {
-    if (selectedSubscriptionId !== null) {
-      // Здесь должен быть API вызов для отписки
-      // Пока просто удаляем из состояния
-      setSubscriptions(prev => prev.filter(sub => sub.userId !== selectedSubscriptionId));
+  const confirmUnsubscribe = async () => {
+    if (selectedSubscriptionId === null) return;
+
+    setUnsubscribeLoading(true);
+    try {
+      // Вызываем метод отписки из profileService
+      const response = await profileAPI.unsubscribeFromUser(selectedSubscriptionId);
+      
+      if (response.data?.state === 'OK') {
+        // Успешно отписались - удаляем из списка
+        setSubscriptions(prev => prev.filter(sub => sub.userId !== selectedSubscriptionId));
+      } else {
+        // Обработка ошибки от бэкенда
+        console.error('Unsubscribe error:', response.data?.message);
+      }
+    } catch (err: any) {
+      console.error('Error unsubscribing:', err);
+      // Обрабатываем специфичные ошибки
+      if (err.response?.data?.data?.details?.state === 'Fail_NotFound') {
+        console.error('Subscription not found - removing from list anyway');
+        // Если подписка не найдена, всё равно удаляем из списка
+        setSubscriptions(prev => prev.filter(sub => sub.userId !== selectedSubscriptionId));
+      }
+    } finally {
+      setUnsubscribeLoading(false);
+      setShowUnsubscribeModal(false);
+      setSelectedSubscriptionId(null);
     }
-    setShowUnsubscribeModal(false);
-    setSelectedSubscriptionId(null);
   };
 
-  const handleUserFollow = (subscriptionId: number) => {
+  // Обработчик подписки/отписки для режима !isMine
+  const handleUserFollow = async (subscription: UserSubscription) => {
     if (!isAuthenticated) {
       setShowLoginModal(true);
       return;
     }
     
-    setUserFollowStates(prev => ({
-      ...prev,
-      [subscriptionId]: !prev[subscriptionId]
-    }));
+    const userIdToFollow = subscription.userId;
+    const isCurrentlySubscribed = subscriptionStates[userIdToFollow] || false;
+
+    try {
+      if (isCurrentlySubscribed) {
+        // Отписываемся
+        const response = await profileAPI.unsubscribeFromUser(userIdToFollow);
+        
+        if (response.data?.state === 'OK') {
+          // Обновляем состояние подписки
+          setSubscriptionStates(prev => ({
+            ...prev,
+            [userIdToFollow]: false
+          }));
+          
+          // Уменьшаем счетчик подписчиков
+          setSubscriptionCounts(prev => ({
+            ...prev,
+            [userIdToFollow]: (prev[userIdToFollow] || subscription.subscribersCount || 0) - 1
+          }));
+        }
+      } else {
+        // Подписываемся
+        const response = await profileAPI.subscribeToUser(userIdToFollow);
+        
+        if (response.data?.state === 'OK') {
+          // Обновляем состояние подписки
+          setSubscriptionStates(prev => ({
+            ...prev,
+            [userIdToFollow]: true
+          }));
+          
+          // Увеличиваем счетчик подписчиков
+          setSubscriptionCounts(prev => ({
+            ...prev,
+            [userIdToFollow]: (prev[userIdToFollow] || subscription.subscribersCount || 0) + 1
+          }));
+        }
+      }
+    } catch (err: any) {
+      console.error('Error following/unfollowing user:', err);
+      // Обрабатываем ошибки
+      if (err.response?.data?.data?.details?.state === 'Fail_Conflict') {
+        console.error('Already subscribed to this user');
+      } else if (err.response?.data?.data?.details?.state === 'Fail_NotFound') {
+        console.error('Subscription not found');
+      }
+    }
   };
 
   const getFollowerCount = (subscription: UserSubscription): string => {
-    const isFollowed = userFollowStates[subscription.userId] || false;
-    const baseCount = subscription.subscribersCount || 0;
-    const newCount = isFollowed ? baseCount + 1 : baseCount;
-    const formattedCount = newCount.toLocaleString('ru-RU');
-    
-    return `${formattedCount} ${russianLocalWordConverter(
-      newCount,
-      'подписчик',
-      'подписчика',
-      'подписчиков',
-      'подписчиков'
-    )}`;
+    if (isMine) {
+      // В режиме isMine показываем реальное количество подписчиков
+      const count = subscription.subscribersCount || 0;
+      const formattedCount = count.toLocaleString('ru-RU');
+      
+      return `${formattedCount} ${russianLocalWordConverter(
+        count,
+        'подписчик',
+        'подписчика',
+        'подписчиков',
+        'подписчиков'
+      )}`;
+    } else {
+      // В режиме !isMine используем обновленные счетчики
+      const count = subscriptionCounts[subscription.userId] || subscription.subscribersCount || 0;
+      const formattedCount = count.toLocaleString('ru-RU');
+      
+      return `${formattedCount} ${russianLocalWordConverter(
+        count,
+        'подписчик',
+        'подписчика',
+        'подписчиков',
+        'подписчиков'
+      )}`;
+    }
   };
 
   const handleBackClick = () => {
@@ -185,7 +297,6 @@ function Subscriptions() {
           ) : subscriptions.length > 0 ? (
             <div className="subscriptions-list">
               {subscriptions.map((subscription) => {
-                const isFollowed = userFollowStates[subscription.userId] || false;
                 const displayName = subscription.nickname || subscription.username || 'Пользователь';
                 
                 return isMine ? (
@@ -209,10 +320,10 @@ function Subscriptions() {
                     description={getFollowerCount(subscription)}
                     imageUrl={getImageUrl(subscription.profileImage) || PlaceholderImage}
                     button={true}
-                    buttonLabel={isFollowed ? "Отписаться" : "Подписаться"}
-                    buttonIconUrl={isFollowed ? Delete : AddIcon}
+                    buttonLabel={subscriptionStates[subscription.userId] ? "Отписаться" : "Подписаться"}
+                    buttonIconUrl={subscriptionStates[subscription.userId] ? Delete : AddIcon}
                     onClick={() => handleUserClick(subscription)}
-                    onButtonClick={() => handleUserFollow(subscription.userId)}
+                    onButtonClick={() => handleUserFollow(subscription)}
                     isAuthenticated={isAuthenticated}
                     onUnauthorized={() => setShowLoginModal(true)}
                   />
@@ -242,7 +353,12 @@ function Subscriptions() {
           title="Подтверждение отписки"
           message="Вы уверены, что хотите отписаться от этого пользователя?"
           onConfirm={confirmUnsubscribe}
-          onCancel={() => setShowUnsubscribeModal(false)}
+          onCancel={() => {
+            setShowUnsubscribeModal(false);
+            setSelectedSubscriptionId(null);
+          }}
+          confirmLoading={unsubscribeLoading}
+          confirmText={unsubscribeLoading ? "Отписка..." : "Да, отписаться"}
         />
       </Modal>
     </main>

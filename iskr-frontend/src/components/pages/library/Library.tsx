@@ -1,4 +1,4 @@
-import {useEffect, useState} from "react";
+import {useEffect, useState, useCallback} from "react";
 import "../home/Home.scss";
 import "../statistic/Statistic.scss";
 import "./Library.scss";
@@ -6,7 +6,6 @@ import Input from "../../controls/input/Input.tsx";
 import searchIcon from "../../../assets/elements/search.svg";
 import PrimaryButton from "../../controls/primary-button/PrimaryButton.tsx";
 import CardElement from "../../controls/card-element/CardElement.tsx";
-import TriTovarischaCover from "../../../assets/images/books/tri-tovarischa.jpg";
 import VerticalAccordion from "../../controls/vertical-accordion/VerticalAccordion.tsx";
 import Change from "../../../assets/elements/change.svg";
 import Open from "../../../assets/elements/open.svg";
@@ -20,23 +19,11 @@ import SearchFilters from "../../controls/search-filters/SearchFilters.tsx";
 import Stars from "../../stars/Stars.tsx";
 import AddIcon from "../../../assets/elements/add.svg";
 import {useLocation, useNavigate} from "react-router-dom";
-import MasterIMargheritaCover from "../../../assets/images/books/master-i-margarita.jpg";
-import OrwellCover from "../../../assets/images/books/1984.jpg";
-import PrestuplenieINakazanieCover from "../../../assets/images/books/prestuplenie-i-nakazanie.jpg";
-import VoinaIMirCover from "../../../assets/images/books/voina-i-mir.jpg";
-import GrafMonteCristoCover from "../../../assets/images/books/graf-monte-kristo.jpg";
-import ClassicCover from "../../../assets/images/collections/classic.jpg";
-import RussianLitCover from "../../../assets/images/collections/russian.webp";
-import FantasticCover from "../../../assets/images/collections/fantastic.jpg";
-import DetectiveCover from "../../../assets/images/collections/detective.jpg";
-import PhilosophyCover from "../../../assets/images/collections/philosophy.jpg";
-import ModernProseCover from "../../../assets/images/collections/modern.jpeg";
-import ForeignCover from "../../../assets/images/collections/foreign.jpg";
-import AnnaKareninaCover from "../../../assets/images/books/anna-karenina.jpeg";
-import PortetDorianaGreyaCover from "../../../assets/images/books/portret-doriana-greya.jpg";
-import VelikiyGetsbiCover from "../../../assets/images/books/velikiy-getsbi.jpg";
-import MalenkiyPrintsCover from "../../../assets/images/books/malenkiy-prints.jpg";
-import IdiotCover from "../../../assets/images/books/idiot.jpg";
+import {useSelector} from "react-redux";
+import type {RootState} from "../../../redux/store.ts";
+import libraryAPI, { type LibraryBook, type LibraryCollection } from '../../../api/libraryService';
+import { getImageUrl } from '../../../api/popularService';
+import PlaceholderImage from '../../../assets/images/placeholder.jpg';
 import Avatar1 from '../../../assets/images/users/avatar1.jpg';
 import Avatar2 from '../../../assets/images/users/avatar2.jpg';
 import Avatar3 from '../../../assets/images/users/avatar3.jpg';
@@ -45,15 +32,15 @@ import Avatar5 from '../../../assets/images/users/avatar5.jpg';
 import Avatar6 from '../../../assets/images/users/avatar6.jpg';
 import Avatar7 from '../../../assets/images/users/avatar7.jpg';
 import Avatar8 from '../../../assets/images/users/avatar8.jpg';
-import {useSelector} from "react-redux";
-import type {RootState} from "../../../redux/store.ts";
 
+// Локальные интерфейсы для компонента
 interface Book {
   id: string;
   title: string;
   author: string;
   rating?: number;
   imageUrl: string;
+  originalBook?: LibraryBook; // Сохраняем оригинальный объект для возможного использования
 }
 
 interface Collection {
@@ -62,39 +49,157 @@ interface Collection {
   creator: string;
   booksCount: number;
   imageUrl: string;
+  originalCollection?: LibraryCollection; // Сохраняем оригинальный объект
 }
 
 function Library() {
   const {user, isAuthenticated} = useSelector((state: RootState) => state.auth);
-  const isNewUser = user?.username === 'newuser';
+  const location = useLocation();
+  const navigate = useNavigate();
 
-  const [books, setBooks] = useState<Book[]>(isNewUser ? [] : [
-    { id: '1', title: "Три товарища", author: "Эрих Мария Ремарк", rating: 4.5, imageUrl: TriTovarischaCover },
-    { id: '2', title: "Мастер и Маргарита", author: "Михаил Булгаков", rating: 4.8, imageUrl: MasterIMargheritaCover },
-    { id: '3', title: "1984", author: "Джордж Оруэлл", rating: 4.6, imageUrl: OrwellCover },
-    { id: '4', title: "Преступление и наказание", author: "Фёдор Достоевский", rating: 4.7, imageUrl: PrestuplenieINakazanieCover },
-    { id: '5', title: "Война и мир", author: "Лев Толстой", rating: 4.9, imageUrl: VoinaIMirCover },
-    { id: '6', title: "Граф Монте-Кристо", author: "Александр Дюма", rating: 4.8, imageUrl: GrafMonteCristoCover }
-  ]);
+  // Состояния для данных с бэкенда
+  const [libraryBooks, setLibraryBooks] = useState<LibraryBook[]>([]);
+  const [libraryCollections, setLibraryCollections] = useState<LibraryCollection[]>([]);
+  const [wishlistBooks, setWishlistBooks] = useState<LibraryBook[]>([]);
+  const [wishlistId, setWishlistId] = useState<number | undefined>(undefined);
+  
+  // Преобразованные данные для отображения
+  const [books, setBooks] = useState<Book[]>([]);
+  const [collections, setCollections] = useState<Collection[]>([]);
+  const [wishlist, setWishlist] = useState<Book[]>([]);
+  
+  // Состояния загрузки
+  const [loadingBooks, setLoadingBooks] = useState(true);
+  const [loadingCollections, setLoadingCollections] = useState(true);
+  const [loadingWishlist, setLoadingWishlist] = useState(true);
+  const [loadingError, setLoadingError] = useState<string | null>(null);
 
-  const [collections, setCollections] = useState<Collection[]>(isNewUser ? [] : [
-    { id: '1', title: "Классика", creator: "ghost_67", booksCount: 30, imageUrl: ClassicCover },
-    { id: '2', title: "Русская литература", creator: "book_lover", booksCount: 45, imageUrl: RussianLitCover },
-    { id: '3', title: "Фантастика", creator: "sci_fi_fan", booksCount: 28, imageUrl: FantasticCover },
-    { id: '4', title: "Детективы", creator: "mystery_reader", booksCount: 35, imageUrl: DetectiveCover },
-    { id: '5', title: "Философия", creator: "thinker_99", booksCount: 22, imageUrl: PhilosophyCover },
-    { id: '6', title: "Современная проза", creator: "modern_lit", booksCount: 40, imageUrl: ModernProseCover },
-    { id: '7', title: "Зарубежная классика", creator: "world_books", booksCount: 50, imageUrl: ForeignCover },
-  ]);
+  // Функция для преобразования LibraryBook в Book
+  const transformLibraryBookToBook = (libBook: LibraryBook): Book => {
+    const authors = libBook.authors.map(a => a.name).join(', ');
+    const rating = libBook.averageRating ? libBook.averageRating / 2 : undefined; // Конвертируем из 10-балльной в 5-балльную
+    
+    let imageUrl = PlaceholderImage;
+    if (libBook.photoLink?.imageData?.uuid) {
+      const url = getImageUrl(libBook.photoLink.imageData.uuid);
+      if (url) imageUrl = url;
+    }
+    
+    return {
+      id: libBook.bookId.toString(),
+      title: libBook.title,
+      author: authors,
+      rating: rating,
+      imageUrl: imageUrl,
+      originalBook: libBook
+    };
+  };
 
-  const [wishlist, setWishlist] = useState<Book[]>(isNewUser ? [] : [
-    { id: '1', title: "Анна Каренина", author: "Лев Толстой", rating: 4.6, imageUrl: AnnaKareninaCover },
-    { id: '2', title: "Портрет Дориана Грея", author: "Оскар Уайльд", rating: 4.5, imageUrl: PortetDorianaGreyaCover },
-    { id: '3', title: "Великий Гэтсби", author: "Фрэнсис Скотт Фицджеральд", rating: 4.4, imageUrl: VelikiyGetsbiCover },
-    { id: '4', title: "Маленький принц", author: "Антуан де Сент-Экзюпери", rating: 4.9, imageUrl: MalenkiyPrintsCover },
-    { id: '5', title: "Идиот", author: "Фёдор Достоевский", rating: 4.7, imageUrl: IdiotCover },
-  ]);
+  // Функция для преобразования LibraryCollection в Collection
+  const transformLibraryCollectionToCollection = (libCollection: LibraryCollection): Collection => {
+    let imageUrl = PlaceholderImage;
+    if (libCollection.photoLink?.imageData?.uuid) {
+      const url = getImageUrl(libCollection.photoLink.imageData.uuid);
+      if (url) imageUrl = url;
+    }
+    
+    return {
+      id: libCollection.bcolsId.toString(),
+      title: libCollection.title,
+      creator: libCollection.ownerNickname,
+      booksCount: libCollection.bookCount,
+      imageUrl: imageUrl,
+      originalCollection: libCollection
+    };
+  };
 
+  // Загрузка данных с бэкенда
+  const loadLibraryData = useCallback(async () => {
+    try {
+      setLoadingError(null);
+      
+      // Загружаем все данные параллельно
+      const [booksData, collectionsData, wishlistData] = await Promise.allSettled([
+        libraryAPI.getLibraryBooks(),
+        libraryAPI.getLibraryCollections(),
+        libraryAPI.getWishlist()
+      ]);
+      
+      // Обработка книг
+      if (booksData.status === 'fulfilled') {
+        setLibraryBooks(booksData.value);
+        const transformedBooks = booksData.value.map(transformLibraryBookToBook);
+        setBooks(transformedBooks);
+      } else {
+        console.error('Error loading books:', booksData.reason);
+      }
+      setLoadingBooks(false);
+      
+      // Обработка коллекций
+      if (collectionsData.status === 'fulfilled') {
+        setLibraryCollections(collectionsData.value);
+        const transformedCollections = collectionsData.value.map(transformLibraryCollectionToCollection);
+        setCollections(transformedCollections);
+      } else {
+        console.error('Error loading collections:', collectionsData.reason);
+      }
+      setLoadingCollections(false);
+      
+      // Обработка вишлиста
+      if (wishlistData.status === 'fulfilled') {
+        setWishlistBooks(wishlistData.value.books);
+        setWishlistId(wishlistData.value.wishlistId);
+        const transformedWishlist = wishlistData.value.books.map(transformLibraryBookToBook);
+        setWishlist(transformedWishlist);
+      } else {
+        console.error('Error loading wishlist:', wishlistData.reason);
+      }
+      setLoadingWishlist(false);
+      
+    } catch (error: any) {
+      console.error('Error loading library data:', error);
+      setLoadingError(error.message || 'Ошибка загрузки данных библиотеки');
+      setLoadingBooks(false);
+      setLoadingCollections(false);
+      setLoadingWishlist(false);
+    }
+  }, []);
+
+  // Загрузка данных при монтировании
+  useEffect(() => {
+    loadLibraryData();
+  }, [loadLibraryData]);
+
+  // Модальные окна и состояния
+  const [isAddBookOpen, setIsAddBookOpen] = useState(false);
+  const [highlightedBookId, setHighlightedBookId] = useState<string | null>(null);
+  const [isAddCollectionOpen, setIsAddCollectionOpen] = useState(false);
+  const [highlightedCollectionId, setHighlightedCollectionId] = useState<string | null>(null);
+  const [isConfirmClearWishlist, setIsConfirmClearWishlist] = useState(false);
+  const [isConfirmDeleteBook, setIsConfirmDeleteBook] = useState(false);
+  const [bookToDelete, setBookToDelete] = useState<string | null>(null);
+
+  // Поиск
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedTypes, setSelectedTypes] = useState<string[]>(['books', 'users', 'collections']);
+  const [selectedGenre, setSelectedGenre] = useState('Все жанры');
+  const [isBookInWishlist, setIsBookInWishlist] = useState(false);
+  const [isUserFollowed, setIsUserFollowed] = useState(false);
+  const [isCollectionFavorited, setIsCollectionFavorited] = useState(false);
+
+  // Моковые пользователи для поиска (пока нет API)
+  const libraryUsers = [
+    { id: 1, username: "ghost_67", followers: "12 567", avatar: Avatar1 },
+    { id: 2, username: "book_lover", followers: "8 234", avatar: Avatar2 },
+    { id: 3, username: "reader_pro", followers: "15 890", avatar: Avatar3 },
+    { id: 4, username: "lit_critic", followers: "6 543", avatar: Avatar4 },
+    { id: 5, username: "page_turner", followers: "11 234", avatar: Avatar5 },
+    { id: 6, username: "bibliophile", followers: "9 876", avatar: Avatar6 },
+    { id: 7, username: "story_seeker", followers: "13 456", avatar: Avatar7 },
+    { id: 8, username: "word_wizard", followers: "7 890", avatar: Avatar8 },
+  ];
+
+  // Функции для обработки событий (пока оставляем моковые, потом заменим на API)
   const handleAddBookClick = () => {
     setIsAddBookOpen(true);
   };
@@ -161,32 +266,7 @@ function Library() {
     setIsConfirmDeleteBook(false);
   };
 
-  const [isAddBookOpen, setIsAddBookOpen] = useState(false);
-  const [highlightedBookId, setHighlightedBookId] = useState<string | null>(null);
-  const [isAddCollectionOpen, setIsAddCollectionOpen] = useState(false);
-  const [highlightedCollectionId, setHighlightedCollectionId] = useState<string | null>(null);
-  const [isConfirmClearWishlist, setIsConfirmClearWishlist] = useState(false);
-  const [isConfirmDeleteBook, setIsConfirmDeleteBook] = useState(false);
-  const [bookToDelete, setBookToDelete] = useState<string | null>(null);
-
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedTypes, setSelectedTypes] = useState<string[]>(['books', 'users', 'collections']);
-  const [selectedGenre, setSelectedGenre] = useState('Все жанры');
-  const [isBookInWishlist, setIsBookInWishlist] = useState(false);
-  const [isUserFollowed, setIsUserFollowed] = useState(false);
-  const [isCollectionFavorited, setIsCollectionFavorited] = useState(false);
-
-  const libraryUsers = [
-    { id: 1, username: "ghost_67", followers: "12 567", avatar: Avatar1 },
-    { id: 2, username: "book_lover", followers: "8 234", avatar: Avatar2 },
-    { id: 3, username: "reader_pro", followers: "15 890", avatar: Avatar3 },
-    { id: 4, username: "lit_critic", followers: "6 543", avatar: Avatar4 },
-    { id: 5, username: "page_turner", followers: "11 234", avatar: Avatar5 },
-    { id: 6, username: "bibliophile", followers: "9 876", avatar: Avatar6 },
-    { id: 7, username: "story_seeker", followers: "13 456", avatar: Avatar7 },
-    { id: 8, username: "word_wizard", followers: "7 890", avatar: Avatar8 },
-  ];
-
+  // Функции поиска
   const filterSearchResults = () => {
     const query = searchQuery.toLowerCase().trim();
     if (!query) return { books: [], users: [], collections: [] };
@@ -270,9 +350,7 @@ function Library() {
     });
   };
 
-  const location = useLocation();
-  const navigate = useNavigate();
-
+  // Эффект для обработки обновлений из других страниц
   useEffect(() => {
     if (location.state?.updatedBook) {
       const { id, title, author, rating, imageUrl } = location.state.updatedBook;
@@ -316,6 +394,288 @@ function Library() {
     }
   }, [location.state]);
 
+  // Функции для рендеринга состояний загрузки
+  const renderLoadingState = (message: string) => (
+    <div className="loading-state">
+      <div className="loading-spinner"></div>
+      <p>{message}</p>
+    </div>
+  );
+
+  const renderErrorState = (message: string) => (
+    <div className="error-state">
+      <p>{message}</p>
+    </div>
+  );
+
+  // Функция для рендеринга раздела книг
+  const renderBooksSection = () => {
+    if (loadingBooks) {
+      return renderLoadingState("Загрузка книг...");
+    }
+    
+    if (loadingError) {
+      return renderErrorState(loadingError);
+    }
+    
+    if (books.length === 0) {
+      return <p className="no-books-message">У вас пока нет добавленных книг.</p>;
+    }
+    
+    return (
+      <VerticalAccordion
+        header={
+          <div className="statistics-container">
+            <div className="statistics-details">
+              <div className="my-books-container">
+                {books.slice(0, 4).map((book) => (
+                  <div
+                    key={book.id}
+                    className={highlightedBookId === book.id ? 'highlighted-book' : ''}
+                  >
+                    <CardElement
+                      title={book.title}
+                      description={book.author}
+                      starsCount={book.rating}
+                      imageUrl={book.imageUrl}
+                      button={true}
+                      buttonLabel={"Изменить"}
+                      buttonIconUrl={Change}
+                      onClick={() => navigate('/book', {
+                        state: {
+                          id: book.id,
+                          title: book.title,
+                          author: book.author,
+                          rating: book.rating,
+                          coverUrl: book.imageUrl,
+                          isMine: isAuthenticated,
+                          isEditMode: false
+                        }
+                      })}
+                      onButtonClick={() => navigate('/book', {
+                        state: {
+                          id: book.id,
+                          title: book.title,
+                          author: book.author,
+                          rating: book.rating,
+                          coverUrl: book.imageUrl,
+                          isMine: isAuthenticated,
+                          isEditMode: true
+                        }
+                      })}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        }
+        content={
+          books.length > 4 ? (
+            <div className="my-books-container">
+              {books.slice(4).map((book) => (
+                <div
+                  key={book.id}
+                  className={highlightedBookId === book.id ? 'highlighted-book' : ''}
+                >
+                  <CardElement
+                    title={book.title}
+                    description={book.author}
+                    starsCount={book.rating}
+                    imageUrl={book.imageUrl}
+                    button={true}
+                    buttonLabel={"Изменить"}
+                    buttonIconUrl={Change}
+                    onClick={() => navigate('/book', {
+                      state: {
+                        id: book.id,
+                        title: book.title,
+                        author: book.author,
+                        rating: book.rating,
+                        coverUrl: book.imageUrl,
+                        isMine: true,
+                        isEditMode: false
+                      }
+                    })}
+                    onButtonClick={() => navigate('/book', {
+                      state: {
+                        id: book.id,
+                        title: book.title,
+                        author: book.author,
+                        rating: book.rating,
+                        coverUrl: book.imageUrl,
+                        isMine: true,
+                        isEditMode: true
+                      }
+                    })}
+                  />
+                </div>
+              ))}
+            </div>
+          ) : null
+        }
+      />
+    );
+  };
+
+  // Функция для рендеринга раздела коллекций
+  const renderCollectionsSection = () => {
+    if (loadingCollections) {
+      return renderLoadingState("Загрузка коллекций...");
+    }
+    
+    if (loadingError) {
+      return renderErrorState(loadingError);
+    }
+    
+    if (collections.length === 0) {
+      return <p className="no-books-message">У вас пока нет созданных коллекций.</p>;
+    }
+    
+    return (
+      <VerticalAccordion
+        header={
+          <div className="statistics-container">
+            <div className="statistics-details">
+              <div className="my-books-container">
+                {collections.slice(0, 4).map((collection) => (
+                  <div
+                    key={collection.id}
+                    className={highlightedCollectionId === collection.id ? 'highlighted-book' : ''}
+                  >
+                    <CardElement
+                      title={collection.title}
+                      description={collection.creator}
+                      infoDecoration={`${collection.booksCount} книг`}
+                      imageUrl={collection.imageUrl}
+                      button={true}
+                      buttonLabel={"Открыть"}
+                      buttonIconUrl={Open}
+                      onClick={() => navigate('/collection', {
+                        state: {
+                          id: collection.id,
+                          name: collection.title,
+                          isMine: isAuthenticated,
+                          books: books
+                        }
+                      })}
+                      onButtonClick={() => navigate('/collection', {
+                        state: {
+                          id: collection.id,
+                          name: collection.title,
+                          isMine: isAuthenticated,
+                          books: books
+                        }
+                      })}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        }
+        content={
+          collections.length > 4 ? (
+            <div className="my-books-container">
+              {collections.slice(4).map((collection) => (
+                <div
+                  key={collection.id}
+                  className={highlightedCollectionId === collection.id ? 'highlighted-book' : ''}
+                >
+                  <CardElement
+                    title={collection.title}
+                    description={collection.creator}
+                    infoDecoration={`${collection.booksCount} книг`}
+                    imageUrl={collection.imageUrl}
+                    button={true}
+                    buttonLabel={"Открыть"}
+                    buttonIconUrl={Open}
+                    onClick={() => navigate('/collection', {
+                      state: {
+                        id: collection.id,
+                        name: collection.title,
+                        isMine: true,
+                        books: books
+                      }
+                    })}
+                    onButtonClick={() => navigate('/collection', {
+                      state: {
+                        id: collection.id,
+                        name: collection.title,
+                        isMine: true,
+                        books: books
+                      }
+                    })}
+                  />
+                </div>
+              ))}
+            </div>
+          ) : null
+        }
+      />
+    );
+  };
+
+  // Функция для рендеринга раздела вишлиста
+  const renderWishlistSection = () => {
+    if (loadingWishlist) {
+      return renderLoadingState("Загрузка вишлиста...");
+    }
+    
+    if (loadingError) {
+      return renderErrorState(loadingError);
+    }
+    
+    if (wishlist.length === 0) {
+      return <p className="no-books-message">В вашем вишлисте пока нет книг.</p>;
+    }
+    
+    return (
+      <VerticalAccordion
+        header={
+          <div className="statistics-container">
+            <div className="statistics-details">
+              <div className="my-books-container">
+                {wishlist.slice(0, 4).map((book) => (
+                  <CardElement
+                    key={book.id}
+                    title={book.title}
+                    description={book.author}
+                    starsCount={book.rating}
+                    imageUrl={book.imageUrl}
+                    button={true}
+                    buttonLabel={"Удалить"}
+                    buttonIconUrl={Delete}
+                    onButtonClick={() => handleDeleteFromWishlistClick(book.id)}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        }
+        content={
+          wishlist.length > 4 ? (
+            <div className="my-books-container">
+              {wishlist.slice(4).map((book) => (
+                <CardElement
+                  key={book.id}
+                  title={book.title}
+                  description={book.author}
+                  starsCount={book.rating}
+                  imageUrl={book.imageUrl}
+                  button={true}
+                  buttonLabel={"Удалить"}
+                  buttonIconUrl={Delete}
+                  onButtonClick={() => handleDeleteFromWishlistClick(book.id)}
+                />
+              ))}
+            </div>
+          ) : null
+        }
+      />
+    );
+  };
+
   return (
     <>
       <main>
@@ -336,11 +696,11 @@ function Library() {
               {selectedTypes.length > 0 && (
                 <div className="search-results container">
                   <div className="search-results-content">
-                    {user?.username === 'newuser' ? (
+                    {books.length === 0 && collections.length === 0 && wishlist.length === 0 ? (
                       <div className="no-results-message">
                         У вас в библиотеке пока нет результатов поиска. Пожалуйста, добавьте книги или создайте коллекции, чтобы начать поиск.
                       </div>
-                      ) : (
+                    ) : (
                       <>
                         <div className="results-count">
                           Найдено результатов: {totalResultsCount}
@@ -445,107 +805,13 @@ function Library() {
             </>
           )}
         </div>
+
         <div className="top-container">
           <div className="container-title-with-button">
             <h2>Мои книги</h2>
             <PrimaryButton label={"Добавить книгу"} onClick={handleAddBookClick}/>
           </div>
-          <VerticalAccordion
-            header={books.length > 0 ?
-              (
-                <div className="statistics-container">
-                  <div className="statistics-details">
-                    <div className="my-books-container">
-                      {books.slice(0, 4).map((book) => (
-                        <div
-                          key={book.id}
-                          className={highlightedBookId === book.id ? 'highlighted-book' : ''}
-                        >
-                          <CardElement
-                            title={book.title}
-                            description={book.author}
-                            starsCount={book.rating}
-                            imageUrl={book.imageUrl}
-                            button={true}
-                            buttonLabel={"Изменить"}
-                            buttonIconUrl={Change}
-                            onClick={() => navigate('/book', {
-                              state: {
-                                id: book.id,
-                                title: book.title,
-                                author: book.author,
-                                rating: book.rating,
-                                coverUrl: book.imageUrl,
-                                isMine: isAuthenticated,
-                                isEditMode: false
-                              }
-                            })}
-                            onButtonClick={() => navigate('/book', {
-                              state: {
-                                id: book.id,
-                                title: book.title,
-                                author: book.author,
-                                rating: book.rating,
-                                coverUrl: book.imageUrl,
-                                isMine: isAuthenticated,
-                                isEditMode: true
-                              }
-                            })}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <p className="no-books-message">У вас пока нет добавленных книг.</p>
-              )
-            }
-            content={books.length > 4 ?
-              (
-                <div className="my-books-container">
-                  {books.slice(4).map((book) => (
-                    <div
-                      key={book.id}
-                      className={highlightedBookId === book.id ? 'highlighted-book' : ''}
-                    >
-                      <CardElement
-                        title={book.title}
-                        description={book.author}
-                        starsCount={book.rating}
-                        imageUrl={book.imageUrl}
-                        button={true}
-                        buttonLabel={"Изменить"}
-                        buttonIconUrl={Change}
-                        onClick={() => navigate('/book', {
-                          state: {
-                            id: book.id,
-                            title: book.title,
-                            author: book.author,
-                            rating: book.rating,
-                            coverUrl: book.imageUrl,
-                            isMine: true,
-                            isEditMode: false
-                          }
-                        })}
-                        onButtonClick={() => navigate('/book', {
-                          state: {
-                            id: book.id,
-                            title: book.title,
-                            author: book.author,
-                            rating: book.rating,
-                            coverUrl: book.imageUrl,
-                            isMine: true,
-                            isEditMode: true
-                          }
-                        })}
-                      />
-                    </div>
-                  ))}
-                </div>
-              ) : null
-            }
-          />
+          {renderBooksSection()}
         </div>
 
         <div className="top-container">
@@ -553,90 +819,7 @@ function Library() {
             <h2>Мои коллекции</h2>
             <PrimaryButton label={"Создать коллекцию"} onClick={handleAddCollectionClick}/>
           </div>
-          <VerticalAccordion
-            header={collections.length > 0 ?
-              (
-                <div className="statistics-container">
-                  <div className="statistics-details">
-                    <div className="my-books-container">
-                      {collections.slice(0, 4).map((collection) => (
-                        <div
-                          key={collection.id}
-                          className={highlightedCollectionId === collection.id ? 'highlighted-book' : ''}
-                        >
-                          <CardElement
-                            title={collection.title}
-                            description={collection.creator}
-                            infoDecoration={`${collection.booksCount} книг`}
-                            imageUrl={collection.imageUrl}
-                            button={true}
-                            buttonLabel={"Открыть"}
-                            buttonIconUrl={Open}
-                            onClick={() => navigate('/collection', {
-                              state: {
-                                id: collection.id,
-                                name: collection.title,
-                                isMine: isAuthenticated,
-                                books: books
-                              }
-                            })}
-                            onButtonClick={() => navigate('/collection', {
-                              state: {
-                                id: collection.id,
-                                name: collection.title,
-                                isMine: isAuthenticated,
-                                books: books
-                              }
-                            })}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <p className="no-books-message">У вас пока нет созданных коллекций.</p>
-              )
-            }
-            content={collections.length > 4 ?
-              (
-                <div className="my-books-container">
-                  {collections.slice(4).map((collection) => (
-                    <div
-                      key={collection.id}
-                      className={highlightedCollectionId === collection.id ? 'highlighted-book' : ''}
-                    >
-                      <CardElement
-                        title={collection.title}
-                        description={collection.creator}
-                        infoDecoration={`${collection.booksCount} книг`}
-                        imageUrl={collection.imageUrl}
-                        button={true}
-                        buttonLabel={"Открыть"}
-                        buttonIconUrl={Open}
-                        onClick={() => navigate('/collection', {
-                          state: {
-                            id: collection.id,
-                            name: collection.title,
-                            isMine: true,
-                            books: books
-                          }
-                        })}
-                        onButtonClick={() => navigate('/collection', {
-                          state: {
-                            id: collection.id,
-                            name: collection.title,
-                            isMine: true,
-                            books: books
-                          }
-                        })}
-                      />
-                    </div>
-                  ))}
-                </div>
-              ) : null
-            }
-          />
+          {renderCollectionsSection()}
         </div>
 
         <div className="top-container">
@@ -644,55 +827,11 @@ function Library() {
             <h2>Мой вишлист</h2>
             <PrimaryButton label={"Очистить вишлист"} onClick={handleClearWishlistClick}/>
           </div>
-          <VerticalAccordion
-            header={wishlist.length > 0 ?
-              (
-                <div className="statistics-container">
-                  <div className="statistics-details">
-                    <div className="my-books-container">
-                      {wishlist.slice(0, 4).map((book) => (
-                        <CardElement
-                          key={book.id}
-                          title={book.title}
-                          description={book.author}
-                          starsCount={book.rating}
-                          imageUrl={book.imageUrl}
-                          button={true}
-                          buttonLabel={"Удалить"}
-                          buttonIconUrl={Delete}
-                          onButtonClick={() => handleDeleteFromWishlistClick(book.id)}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <p className="no-books-message">В вашем вишлисте пока нет книг.</p>
-              )
-            }
-            content={wishlist.length > 4 ?
-              (
-                <div className="my-books-container">
-                  {wishlist.slice(4).map((book) => (
-                    <CardElement
-                      key={book.id}
-                      title={book.title}
-                      description={book.author}
-                      starsCount={book.rating}
-                      imageUrl={book.imageUrl}
-                      button={true}
-                      buttonLabel={"Удалить"}
-                      buttonIconUrl={Delete}
-                      onButtonClick={() => handleDeleteFromWishlistClick(book.id)}
-                    />
-                  ))}
-                </div>
-              ) : null
-            }
-          />
+          {renderWishlistSection()}
         </div>
       </main>
 
+      {/* Модальные окна */}
       <Modal open={isAddBookOpen} onClose={() => setIsAddBookOpen(false)}>
         <BookForm
           onSubmit={handleBookFormSubmit}
