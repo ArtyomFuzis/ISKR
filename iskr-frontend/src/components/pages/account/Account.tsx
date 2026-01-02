@@ -2,10 +2,10 @@ import PrimaryButton from "../../controls/primary-button/PrimaryButton.tsx";
 import CardElement from "../../controls/card-element/CardElement.tsx";
 import AddIcon from "../../../assets/elements/add.svg";
 import Delete from "../../../assets/elements/delete.svg";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../../redux/store.ts";
-import ProfileForm from "../../controls/profile-form/ProfileForm.tsx";
+import ProfileEditMenu from "../../controls/profile-edit-menu/ProfileEditMenu.tsx";
 import Modal from "../../controls/modal/Modal.tsx";
 import { useNavigate } from "react-router-dom";
 import SecondaryButton from "../../controls/secondary-button/SecondaryButton.tsx";
@@ -31,44 +31,45 @@ function Account() {
   const [error, setError] = useState<string | null>(null);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
 
+  // Функция для загрузки данных профиля (вынесена для переиспользования)
+  const loadProfileData = useCallback(async () => {
+    if (!authUser?.id) {
+      setError("Пользователь не авторизован");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Преобразуем id в число (если строка)
+      const userId = typeof authUser.id === 'string' ? parseInt(authUser.id) : authUser.id;
+      
+      // Загружаем все данные параллельно
+      const [profileData, subscribersData, subscriptionsData, collectionsData] = await Promise.all([
+        profileAPI.getUserProfile(userId),
+        profileAPI.getUserSubscribers(userId, 6, 0),
+        profileAPI.getUserSubscriptions(userId, 6, 0),
+        profileAPI.getUserCollections(userId, 4, 0)
+      ]);
+
+      setProfile(profileData);
+      setSubscribers(subscribersData);
+      setSubscriptions(subscriptionsData);
+      setCollections(collectionsData);
+    } catch (err: any) {
+      console.error('Error loading account data:', err);
+      setError(err.message || 'Ошибка загрузки данных профиля');
+    } finally {
+      setLoading(false);
+    }
+  }, [authUser?.id]);
+
   // Загрузка данных профиля текущего пользователя
   useEffect(() => {
-    const loadProfileData = async () => {
-      if (!authUser?.id) {
-        setError("Пользователь не авторизован");
-        setLoading(false);
-        return;
-      }
-
-      try {
-        setLoading(true);
-        setError(null);
-
-        // Преобразуем id в число (если строка)
-        const userId = typeof authUser.id === 'string' ? parseInt(authUser.id) : authUser.id;
-        
-        // Загружаем все данные параллельно
-        const [profileData, subscribersData, subscriptionsData, collectionsData] = await Promise.all([
-          profileAPI.getUserProfile(userId),
-          profileAPI.getUserSubscribers(userId, 6, 0),
-          profileAPI.getUserSubscriptions(userId, 6, 0),
-          profileAPI.getUserCollections(userId, 4, 0)
-        ]);
-
-        setProfile(profileData);
-        setSubscribers(subscribersData);
-        setSubscriptions(subscriptionsData);
-        setCollections(collectionsData);
-      } catch (err: any) {
-        console.error('Error loading account data:', err);
-        setError(err.message || 'Ошибка загрузки данных профиля');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadProfileData();
-  }, [authUser?.id]);
+  }, [loadProfileData]);
 
   // Обработчики
   const handleSubscriberClick = () => {
@@ -81,6 +82,11 @@ function Account() {
       });
     }
   };
+
+  const handleProfilePhotoChanged = () => {
+  // Перезагружаем данные профиля, чтобы обновилось фото
+  loadProfileData();
+};
 
   const handleSubscriptionsClick = () => {
     if (profile) {
@@ -119,7 +125,45 @@ function Account() {
 
   const handleEditProfile = (): void => {
     setIsEditProfileOpen(true);
+  };
+
+  const handleCloseEditProfile = (): void => {
+    setIsEditProfileOpen(false);
+  };
+
+  // Функция для обновления имени пользователя
+  const handleUsernameChanged = (newUsername: string) => {
+    // Обновляем состояние профиля
+    if (profile) {
+      setProfile({
+        ...profile,
+        username: newUsername
+      });
+    }
+    
+    // Перезагружаем данные профиля
+    loadProfileData();
+  };
+
+  const handleDescriptionChanged = (newDescription: string) => {
+  if (profile) {
+    setProfile({
+      ...profile,
+      profileDescription: newDescription
+    });
   }
+};
+
+const handleNicknameChanged = (newNickname: string) => {
+  if (profile) {
+    setProfile({
+      ...profile,
+      nickname: newNickname
+    });
+  }
+  // Обновляем отображаемое имя
+  loadProfileData();
+};
 
   // Получаем URL аватара
   const getAvatarUrl = (): string => {
@@ -272,11 +316,11 @@ function Account() {
                 
                 {/* Описание профиля */}
                 {profileDescription && (
-  <div className="profile-description">
-    <span className="profile-description-title">Описание профиля</span>
-    <p>{profileDescription}</p>
-  </div>
-)}
+                  <div className="profile-description">
+                    <span className="profile-description-title">Описание профиля</span>
+                    <p>{profileDescription}</p>
+                  </div>
+                )}
               </div>
 
               <div className="profile-info-collections">
@@ -367,9 +411,23 @@ function Account() {
         </div>
       </main>
 
-      <Modal open={isEditProfileOpen} onClose={() => setIsEditProfileOpen(false)}>
-        <ProfileForm onSubmit={() => setIsEditProfileOpen(false)} />
-      </Modal>
+      {/* Модальное окно редактирования профиля */}
+      {isEditProfileOpen && (
+        <Modal open={isEditProfileOpen} onClose={handleCloseEditProfile}>
+          <ProfileEditMenu
+  onClose={handleCloseEditProfile}
+  currentUsername={profile?.username || ''}
+  currentImageUrl={getAvatarUrl()}
+  currentDescription={profile?.profileDescription || null}
+  currentNickname={profile?.nickname || null}
+  currentEmail={profile?.email || null}
+  onUsernameChanged={handleUsernameChanged}
+  onProfilePhotoChanged={handleProfilePhotoChanged}
+  onDescriptionChanged={handleDescriptionChanged}
+  onNicknameChanged={handleNicknameChanged}
+/>
+        </Modal>
+      )}
 
       <Modal
         open={showLoginModal}

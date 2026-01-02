@@ -30,6 +30,7 @@ function Profile() {
   }
 
   const isAuthenticated = useSelector((state: RootState) => state.auth.isAuthenticated);
+  const currentUser = useSelector((state: RootState) => state.auth.user);
   const [showLoginModal, setShowLoginModal] = useState(false);
 
   // Состояния для данных
@@ -40,19 +41,25 @@ function Profile() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const [isCheckingSubscription, setIsCheckingSubscription] = useState(false);
   const [currentSubscribersCount, setCurrentSubscribersCount] = useState(0);
+  const [subscriptionLoading, setSubscriptionLoading] = useState(false);
+  const [subscriptionError, setSubscriptionError] = useState<string | null>(null);
 
   // Проверяем, заблокирован ли пользователь
   const isBanned = profile?.status === 'banned';
 
-  // Загрузка данных профиля
+  // Проверяем, является ли этот профиль профилем текущего пользователя
+  const isOwnProfile = currentUser?.id === userId;
+
+  // Загрузка данных профиля и проверка подписки
   useEffect(() => {
     const loadProfileData = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        // Загружаем все данные параллельно
+        // Загружаем данные профиля
         const [profileData, subscribersData, subscriptionsData, collectionsData] = await Promise.all([
           profileAPI.getUserProfile(userId),
           profileAPI.getUserSubscribers(userId, 6, 0),
@@ -65,6 +72,11 @@ function Profile() {
         setSubscribers(subscribersData);
         setSubscriptions(subscriptionsData);
         setCollections(collectionsData);
+
+        // Если пользователь авторизован и это не его профиль - проверяем подписку
+        if (isAuthenticated && !isOwnProfile && !isBanned) {
+          await checkUserSubscription();
+        }
       } catch (err: any) {
         console.error('Error loading profile:', err);
         setError(err.message || 'Ошибка загрузки профиля');
@@ -74,15 +86,73 @@ function Profile() {
     };
 
     loadProfileData();
-  }, [userId]);
+  }, [userId, isAuthenticated]);
 
-  // Обработчики
-  const handleSubscribeProfile = () => {
-    if (isBanned) {
-      return; // Не позволяем подписываться на заблокированного пользователя
+  // Функция для проверки подписки
+  const checkUserSubscription = async () => {
+    if (!isAuthenticated || isOwnProfile || isBanned) return;
+
+    try {
+      setIsCheckingSubscription(true);
+      const isSubscribedResult = await profileAPI.checkSubscription(userId);
+      setIsSubscribed(isSubscribedResult);
+    } catch (err: any) {
+      console.error('Error checking subscription:', err);
+    } finally {
+      setIsCheckingSubscription(false);
     }
-    setIsSubscribed(!isSubscribed);
-    setCurrentSubscribersCount(prev => isSubscribed ? prev - 1 : prev + 1);
+  };
+
+  // Обработчик подписки/отписки
+  const handleSubscribeProfile = async () => {
+    if (!isAuthenticated) {
+      setShowLoginModal(true);
+      return;
+    }
+
+    if (isBanned || isOwnProfile || subscriptionLoading) {
+      return;
+    }
+
+    setSubscriptionLoading(true);
+    setSubscriptionError(null);
+
+    try {
+      if (isSubscribed) {
+        // Отписываемся
+        const response = await profileAPI.unsubscribeFromUser(userId);
+        
+        if (response.data?.state === 'OK') {
+          setIsSubscribed(false);
+          setCurrentSubscribersCount(prev => prev - 1);
+        } else {
+          throw new Error(response.data?.message || 'Ошибка отписки');
+        }
+      } else {
+        // Подписываемся
+        const response = await profileAPI.subscribeToUser(userId);
+        
+        if (response.data?.state === 'OK') {
+          setIsSubscribed(true);
+          setCurrentSubscribersCount(prev => prev + 1);
+        } else {
+          throw new Error(response.data?.message || 'Ошибка подписки');
+        }
+      }
+    } catch (err: any) {
+      console.error('Subscription error:', err);
+      
+      // Обрабатываем специфичные ошибки
+      if (err.response?.data?.data?.details?.state === 'Fail_Conflict') {
+        setSubscriptionError('Вы уже подписаны на этого пользователя');
+      } else if (err.response?.data?.data?.details?.state === 'Fail_NotFound') {
+        setSubscriptionError('Подписка не найдена');
+      } else {
+        setSubscriptionError(err.message || 'Ошибка при выполнении операции');
+      }
+    } finally {
+      setSubscriptionLoading(false);
+    }
   };
 
   const getFormattedSubscribersCount = (): string => {
@@ -220,12 +290,29 @@ function Profile() {
       <div className="top-container">
         <div className="container-title-with-button">
           <h2>Профиль</h2>
-          {isAuthenticated && !isBanned && (
-            <div>
-              {isSubscribed ? (
-                <SecondaryButton label={"Отписаться"} onClick={handleSubscribeProfile}/>
+          {isAuthenticated && !isBanned && !isOwnProfile && (
+            <div className="subscription-container">
+              {subscriptionError && (
+                <div className="subscription-error-message">
+                  {subscriptionError}
+                </div>
+              )}
+              {subscriptionLoading || isCheckingSubscription ? (
+                <div className="subscription-loading">
+                  <div className="small-loading-spinner"></div>
+                </div>
+              ) : isSubscribed ? (
+                <SecondaryButton 
+                  label={"Отписаться"} 
+                  onClick={handleSubscribeProfile}
+                  disabled={subscriptionLoading}
+                />
               ) : (
-                <PrimaryButton label={"Подписаться"} onClick={handleSubscribeProfile}/>
+                <PrimaryButton 
+                  label={"Подписаться"} 
+                  onClick={handleSubscribeProfile}
+                  disabled={subscriptionLoading}
+                />
               )}
             </div>
           )}
@@ -268,11 +355,11 @@ function Profile() {
               
               {/* Описание профиля */}
               {profileDescription && (
-  <div className="profile-description">
-    <span className="profile-description-title">Описание профиля</span>
-    <p>{profileDescription}</p>
-  </div>
-)}
+                <div className="profile-description">
+                  <span className="profile-description-title">Описание профиля</span>
+                  <p>{profileDescription}</p>
+                </div>
+              )}
             </div>
 
             <div className="profile-info-collections">

@@ -25,7 +25,7 @@ public class SubscriberController {
         return httpUtil.handleServiceResponse(subscriberService.subscribe(userId, userOnId));
     }
 
-    @DeleteMapping("/unsubscribe")
+    @PostMapping("/unsubscribe")
     public ResponseEntity<ChangeDTO<Object>> unsubscribe(
             @RequestParam @Min(1) Integer userId,
             @RequestParam @Min(1) Integer userOnId) {
@@ -50,7 +50,7 @@ public class SubscriberController {
 
     @GetMapping("/is-subscriber")
     public ResponseEntity<ChangeDTO<Object>> isSubscriber(
-            @RequestParam @Min(1) Integer userId,
+            @RequestHeader @Min(1) Integer userId,
             @RequestParam @Min(1) Integer userOnId) {
         return httpUtil.handleServiceResponse(subscriberService.isSubscriber(userId, userOnId));
     }

@@ -148,6 +148,123 @@ export const profileAPI = {
     }
   },
 
+  // profileService.ts - добавить новую функцию
+changeUsername: async (newUsername: string): Promise<ApiResponse<any>> => {
+  try {
+    const params = new URLSearchParams();
+    params.append('New-Username', newUsername);
+
+    const response = await api.put('/v1/accounts/username', params, {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+    });
+
+    return response.data;
+  } catch (error: any) {
+    console.error('Error changing username:', error);
+    throw error;
+  }
+},
+uploadImage: async (file: File): Promise<any> => {
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await api.post('/v1/images/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+
+    // Возвращаем весь ответ, так как структура может быть разной
+    return response.data;
+  } catch (error) {
+    console.error('Error uploading image:', error);
+    throw error;
+  }
+},
+
+// Изменение фото профиля
+changeProfileImage: async (imageId: number): Promise<any> => {
+  try {
+    const response = await api.put(`/v1/accounts/image?New-Image-ID=${imageId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error changing profile image:', error);
+    throw error;
+  }
+},
+
+changeProfileDescription: async (description: string): Promise<any> => {
+  try {
+    const params = new URLSearchParams();
+    params.append('New-Description', description);
+
+    const response = await api.put('/v1/accounts/description', params, {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error changing profile description:', error);
+    throw error;
+  }
+},
+
+// Изменение никнейма
+changeNickname: async (nickname: string): Promise<any> => {
+  try {
+    const params = new URLSearchParams();
+    params.append('New-Nickname', nickname);
+
+    const response = await api.put('/v1/accounts/nickname', params, {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error changing nickname:', error);
+    throw error;
+  }
+},
+
+// Изменение email
+changeEmail: async (email: string): Promise<any> => {
+  try {
+    const params = new URLSearchParams();
+    params.append('New-Email', email);
+
+    const response = await api.put('/v1/accounts/email', params, {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error changing email:', error);
+    throw error;
+  }
+},
+changePassword: async (newPassword: string): Promise<any> => {
+  try {
+    const params = new URLSearchParams();
+    params.append('New-Password', newPassword);
+
+    const response = await api.put('/v1/accounts/password', params, {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error changing password:', error);
+    throw error;
+  }
+},
+
   // Получение коллекций пользователя
   getUserCollections: async (
     userId: number, 
@@ -174,6 +291,40 @@ export const profileAPI = {
       return [];
     }
   },
+  subscribeToUser: async (userOnId: number): Promise<any> => {
+  try {
+    const response = await api.post(`/v1/subscribe?userOnId=${userOnId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error subscribing to user:', error);
+    throw error;
+  }
+},
+
+unsubscribeFromUser: async (userOnId: number): Promise<any> => {
+  try {
+    const response = await api.post(`/v1/unsubscribe?userOnId=${userOnId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error unsubscribing from user:', error);
+    throw error;
+  }
+},
+
+checkSubscription: async (userOnId: number): Promise<boolean> => {
+  try {
+    const response = await api.get(`/v1/is-subscriber?userOnId=${userOnId}`);
+    
+    if (response.data.data.state === 'OK') {
+      return response.data.data.key.isSubscriber;
+    }
+    
+    return false;
+  } catch (error) {
+    console.error('Error checking subscription:', error);
+    return false;
+  }
+},
 };
 
 export default profileAPI;

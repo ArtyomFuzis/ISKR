@@ -17,6 +17,7 @@ interface LoginProps {
 }
 
 function Login({ type: initialType, onSubmit, titleId, onSwitchType, onForgotPassword }: LoginProps) {
+  const USERNAME_REGEX = /^[a-zA-Z0-9_\-=@#]+$/;
   const [type, setType] = useState<'login' | 'signup'>(initialType);
   const [isLoading, setIsLoading] = useState(false);
   const [localError, setLocalError] = useState<string>('');
@@ -91,22 +92,37 @@ function Login({ type: initialType, onSubmit, titleId, onSwitchType, onForgotPas
         setIsLoading(false);
       }
     } else {
-      const nickname = formData.get('nickname') as string;
-      const email = formData.get('email') as string;
-      const username = formData.get('username') as string;
-      const password = formData.get('password') as string;
-      const confirmPassword = formData.get('confirm-password') as string;
+  const nickname = formData.get('nickname') as string;
+  const email = formData.get('email') as string;
+  const username = formData.get('username') as string;
+  const password = formData.get('password') as string;
+  const confirmPassword = formData.get('confirm-password') as string;
 
-      // Валидация (убрана проверка длины пароля)
-      if (!nickname || !email || !username || !password || !confirmPassword) {
-        setLocalError('Заполните все поля');
-        return;
-      }
+  // Валидация
+  if (!nickname || !email || !username || !password || !confirmPassword) {
+    setLocalError('Заполните все поля');
+    return;
+  }
 
-      if (password !== confirmPassword) {
-        setLocalError('Пароли не совпадают');
-        return;
-      }
+  if (password !== confirmPassword) {
+    setLocalError('Пароли не совпадают');
+    return;
+  }
+
+  if (username.length < 3) {
+    setLocalError('Имя пользователя должно быть не менее 3 символов');
+    return;
+  }
+
+  if (username.length > 30) {
+    setLocalError('Имя пользователя не должно превышать 30 символов');
+    return;
+  }
+
+  if (!USERNAME_REGEX.test(username)) {
+    setLocalError('Имя пользователя может содержать только английские буквы, цифры и символы _ - = @ #');
+    return;
+  }
 
       if (username.length < 3) {
         setLocalError('Имя пользователя должно быть не менее 3 символов');

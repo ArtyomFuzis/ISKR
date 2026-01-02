@@ -1,5 +1,6 @@
 package com.fuzis.integrationbus.route;
 
+import com.fuzis.integrationbus.exception.AuthenticationException;
 import com.fuzis.integrationbus.exception.ServiceFall;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
@@ -131,6 +132,10 @@ public class BooksCommonRoutes extends RouteBuilder {
                 .handled(true)
                 .to("direct:service-error-handler")
                 .end()
+                .onException(AuthenticationException.class)
+                .handled(true)
+                .to("direct:auth-error-handler")
+                .end()
                 .setHeader("X-Headers-Required", constant("collectionId"))
                 .to("direct:check-params")
                 .setHeader("X-Roles-Required", constant(""))
@@ -146,6 +151,10 @@ public class BooksCommonRoutes extends RouteBuilder {
                 .onException(ServiceFall.class)
                 .handled(true)
                 .to("direct:service-error-handler")
+                .end()
+                .onException(AuthenticationException.class)
+                .handled(true)
+                .to("direct:auth-error-handler")
                 .end()
                 .setHeader("X-Headers-Required", constant("collectionId"))
                 .to("direct:check-params")
@@ -181,6 +190,69 @@ public class BooksCommonRoutes extends RouteBuilder {
                 .setHeader(Exchange.HTTP_METHOD, constant("GET"))
                 .setHeader("X-Service", constant("Books"))
                 .setHeader("X-Service-Request", simple("api/v1/books/${header.bookId}/reviews"))
+                .to("direct:sd-call-finalize");
+
+        from("platform-http:/oapi/v1/subscribe?httpMethodRestrict=POST")
+                .routeId("user-books-subscribe-route")
+                .onException(ServiceFall.class)
+                    .handled(true)
+                    .to("direct:service-error-handler")
+                .end()
+                .onException(AuthenticationException.class)
+                    .handled(true)
+                    .to("direct:auth-error-handler")
+                .end()
+                .setHeader("X-Headers-Required", constant("userOnId"))
+                .to("direct:check-params")
+                .setHeader("X-Roles-Required", constant(""))
+                .to("direct:auth")
+                .setHeader(Exchange.HTTP_METHOD, constant("POST"))
+                .setHeader("X-Service", constant("Books"))
+                .setHeader(Exchange.CONTENT_TYPE, constant("application/x-www-form-urlencoded"))
+                .setBody(simple("userId=${header.X-User-ID}&userOnId=${header.userOnId}"))
+                .setHeader("X-Service-Request", simple("api/v1/subscribers/subscribe"))
+                .to("direct:sd-call-finalize");
+
+        from("platform-http:/oapi/v1/unsubscribe?httpMethodRestrict=POST")
+                .routeId("user-books-unsubscribe-route")
+                .onException(ServiceFall.class)
+                    .handled(true)
+                    .to("direct:service-error-handler")
+                .end()
+                .onException(AuthenticationException.class)
+                    .handled(true)
+                    .to("direct:auth-error-handler")
+                .end()
+                .setHeader("X-Headers-Required", constant("userOnId"))
+                .to("direct:check-params")
+                .setHeader("X-Roles-Required", constant(""))
+                .to("direct:auth")
+                .setHeader(Exchange.HTTP_METHOD, constant("POST"))
+                .setHeader("X-Service", constant("Books"))
+                .setHeader(Exchange.CONTENT_TYPE, constant("application/x-www-form-urlencoded"))
+                .setBody(simple("userId=${header.X-User-ID}&userOnId=${header.userOnId}"))
+                .setHeader("X-Service-Request", simple("api/v1/subscribers/unsubscribe"))
+                .to("direct:sd-call-finalize");
+
+        from("platform-http:/oapi/v1/is-subscriber?httpMethodRestrict=GET")
+                .routeId("user-books-is-subscriber-route-2")
+                .onException(ServiceFall.class)
+                    .handled(true)
+                    .to("direct:service-error-handler")
+                .end()
+                .onException(AuthenticationException.class)
+                    .handled(true)
+                    .to("direct:auth-error-handler")
+                .end()
+                .setHeader("X-Headers-Required", constant("userOnId"))
+                .to("direct:check-params")
+                .setHeader("X-Roles-Required", constant(""))
+                .to("direct:auth")
+                .setHeader(Exchange.HTTP_METHOD, constant("GET"))
+                .setHeader("X-Service", constant("Books"))
+                .setHeader("userId", simple("${header.X-User-ID}"))
+                .setBody(constant(""))
+                .setHeader("X-Service-Request", simple("api/v1/subscribers/is-subscriber"))
                 .to("direct:sd-call-finalize");
     }
 }

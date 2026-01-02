@@ -5,6 +5,7 @@ import com.fuzis.booksbackend.entity.User;
 import com.fuzis.booksbackend.repository.SubscriberRepository;
 import com.fuzis.booksbackend.repository.UserRepository;
 import com.fuzis.booksbackend.transfer.ChangeDTO;
+import com.fuzis.booksbackend.transfer.SubscriptionResultDTO;
 import com.fuzis.booksbackend.transfer.state.State;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -65,8 +66,15 @@ public class SubscriberService {
             Subscriber savedSubscriber = subscriberRepository.save(subscriber);
             log.info("Subscription created successfully: user {} -> user {}", userId, userOnId);
 
+            // Возвращаем только необходимые данные, чтобы избежать циклической зависимости
+            SubscriptionResultDTO result = new SubscriptionResultDTO(
+                    savedSubscriber.getSubsId(),
+                    userId,
+                    userOnId
+            );
+
             return new ChangeDTO<>(State.OK,
-                    "Successfully subscribed", savedSubscriber);
+                    "Successfully subscribed", result);
 
         } catch (DataIntegrityViolationException e) {
             log.error("Data integrity violation when subscribing: ", e);
@@ -104,8 +112,14 @@ public class SubscriberService {
             subscriberRepository.deleteBySubsUserAndSubsUserOn(subsUserOpt.get(), subsUserOnOpt.get());
             log.info("Subscription deleted successfully: user {} -> user {}", userId, userOnId);
 
+            // Возвращаем простой ответ об успехе
+            Map<String, Object> result = new HashMap<>();
+            result.put("message", "Successfully unsubscribed");
+            result.put("userId", userId);
+            result.put("userOnId", userOnId);
+
             return new ChangeDTO<>(State.OK,
-                    "Successfully unsubscribed", null);
+                    "Successfully unsubscribed", result);
 
         } catch (Exception e) {
             log.error("Error deleting subscription: ", e);

@@ -43,4 +43,12 @@
             <sqlFile path="v4_rollback.sql" relativeToChangelogFile="true"/>
         </rollback>
     </changeSet>
+    <changeSet id="add_func-5" author="fuzis" runInTransaction="true">
+        <sqlFile path="v5_add_func.sql"
+                 relativeToChangelogFile="true"
+                 splitStatements="false"/>
+        <rollback>
+            <sqlFile path="v5_rollback.sql" relativeToChangelogFile="true"/>
+        </rollback>
+    </changeSet>
 </databaseChangeLog>
