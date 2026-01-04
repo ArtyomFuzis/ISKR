@@ -31,8 +31,12 @@ public class BookService {
     private final SubscriberRepository subscriberRepository;
 
     @Transactional
-    public ChangeDTO<Object> createBook(BookCreateDTO dto) {
+    public ChangeDTO<Object> createBook(Integer userId, BookCreateDTO dto) {
         try {
+            Optional<User> user = userRepository.findById(userId);
+            if (user.isEmpty()) {
+                return new ChangeDTO<>(State.Fail_NotFound, "User not found", null);
+            }
             log.info("Creating book with title: {}", dto.getTitle());
 
             // Validate ISBN uniqueness if provided
@@ -41,16 +45,6 @@ public class BookService {
                     log.warn("Book with ISBN {} already exists", dto.getIsbn());
                     return new ChangeDTO<>(State.Fail_Conflict,
                             "Book with this ISBN already exists", null);
-                }
-            }
-
-            // Validate photoLink uniqueness if provided
-            if (dto.getPhotoLink() != null) {
-                Optional<ImageLink> photoLinkOpt = imageLinkRepository.findById(dto.getPhotoLink());
-                if (photoLinkOpt.isPresent() && bookRepository.existsByPhotoLink_ImglId(photoLinkOpt.get().getImglId())) {
-                    log.warn("Book with photoLink {} already exists", dto.getPhotoLink());
-                    return new ChangeDTO<>(State.Fail_Conflict,
-                            "Book with this photo link already exists", null);
                 }
             }
 
@@ -70,7 +64,7 @@ public class BookService {
                         "User with specified ID does not exist", null);
             }
 
-            // Fetch photoLink if provided
+            // Fetch photoLink if provided - ИСПРАВЛЕНИЕ ЗДЕСЬ
             ImageLink photoLink = null;
             if (dto.getPhotoLink() != null) {
                 Optional<ImageLink> photoLinkOpt = imageLinkRepository.findById(dto.getPhotoLink());
@@ -79,6 +73,8 @@ public class BookService {
                     return new ChangeDTO<>(State.Fail_NotFound,
                             "Image with specified photo link does not exist", null);
                 }
+                // УБИРАЕМ ПРОВЕРКУ НА УНИКАЛЬНОСТЬ photoLink ПРИ СОЗДАНИИ
+                // Книга еще не создана, поэтому не может быть конфликта
                 photoLink = photoLinkOpt.get();
             }
 
@@ -115,6 +111,7 @@ public class BookService {
                     .addedBy(addedByUserOpt.get())
                     .authors(new HashSet<>(authors))
                     .genres(new HashSet<>(genres))
+                    .addedBy(user.get())
                     .build();
 
             Book savedBook = bookRepository.save(book);
@@ -156,12 +153,22 @@ public class BookService {
     }
 
     @Transactional
-    public ChangeDTO<Object> updateBook(Integer id, BookUpdateDTO dto) {
+    public ChangeDTO<Object> updateBook(Integer userId, Integer id, BookUpdateDTO dto) {
         try {
+            Optional<User> user;
+            if (userId != -1) {
+                user = userRepository.findById(userId);
+                if (user.isEmpty()) {
+                    return new ChangeDTO<>(State.Fail_NotFound, "User not found", null);
+                }
+            } else user = null;
             log.info("Updating book with ID: {}", id);
 
             return bookRepository.findById(id)
                     .map(book -> {
+                        if(user != null &&  user.get() != book.getAddedBy()) {
+                            return new  ChangeDTO<>(State.Fail_Forbidden, "Invalid user", null);
+                        }
                         // Check if title or subtitle changed and validate uniqueness
                         boolean titleChanged = dto.getTitle() != null && !dto.getTitle().isBlank()
                                 && !dto.getTitle().equals(book.getTitle());
@@ -190,26 +197,6 @@ public class BookService {
                             }
                         }
 
-                        // Check photoLink uniqueness if changed
-                        if (dto.getPhotoLink() != null) {
-                            Optional<ImageLink> newPhotoLinkOpt = imageLinkRepository.findById(dto.getPhotoLink());
-                            if (newPhotoLinkOpt.isEmpty()) {
-                                log.warn("ImageLink not found with ID: {}", dto.getPhotoLink());
-                                return new ChangeDTO<>(State.Fail_NotFound,
-                                        "Image with specified photo link does not exist", null);
-                            }
-
-                            ImageLink newPhotoLink = newPhotoLinkOpt.get();
-                            boolean photoLinkChanged = book.getPhotoLink() == null
-                                    || !book.getPhotoLink().getImglId().equals(newPhotoLink.getImglId());
-
-                            if (photoLinkChanged && bookRepository.existsByPhotoLinkAndBookIdNot(newPhotoLink.getImglId(), id)) {
-                                log.warn("Book with photoLink {} already exists", dto.getPhotoLink());
-                                return new ChangeDTO<>(State.Fail_Conflict,
-                                        "Book with this photo link already exists", null);
-                            }
-                        }
-
                         // Update fields if provided
                         if (dto.getTitle() != null && !dto.getTitle().isBlank()) {
                             book.setTitle(dto.getTitle());
@@ -227,12 +214,26 @@ public class BookService {
                             book.setPageCnt(dto.getPageCnt());
                         }
 
-                        // Update photoLink if provided
+                        // Update photoLink if provided - ИСПРАВЛЕНИЕ ЗДЕСЬ
                         if (dto.getPhotoLink() != null) {
                             Optional<ImageLink> photoLinkOpt = imageLinkRepository.findById(dto.getPhotoLink());
                             if (photoLinkOpt.isPresent()) {
+                                // Проверяем, не используется ли этот photoLink в другой книге
+                                Integer currentPhotoLinkId = book.getPhotoLink() != null ?
+                                        book.getPhotoLink().getImglId() : null;
+                                Integer newPhotoLinkId = photoLinkOpt.get().getImglId();
+
+                                // Если пытаемся установить другой photoLink, проверяем на уникальность
+                                if (currentPhotoLinkId == null || !currentPhotoLinkId.equals(newPhotoLinkId)) {
+                                    if (bookRepository.existsByPhotoLinkAndBookIdNot(newPhotoLinkId, id)) {
+                                        log.warn("PhotoLink {} already used by another book", newPhotoLinkId);
+                                        return new ChangeDTO<>(State.Fail_Conflict,
+                                                "This photo link is already used by another book", null);
+                                    }
+                                }
                                 book.setPhotoLink(photoLinkOpt.get());
                             } else {
+                                // Если photoLink указан, но не найден - очищаем
                                 book.setPhotoLink(null);
                             }
                         }
@@ -255,7 +256,7 @@ public class BookService {
                             List<Genre> genres = genreRepository.findByGenreIdIn(
                                     dto.getGenreIds().stream().toList()
                             );
-                            if (genres.size() != dto.getGenreIds().size()) {
+                            if (genres.size() != dto.getAuthorIds().size()) {
                                 log.warn("Some genres not found for IDs: {}", dto.getGenreIds());
                                 return new ChangeDTO<>(State.Fail_NotFound,
                                         "Some genres not found", null);
@@ -285,14 +286,25 @@ public class BookService {
     }
 
     @Transactional
-    public ChangeDTO<Object> deleteBook(Integer id) {
+    public ChangeDTO<Object> deleteBook(Integer userId, Integer id) {
         try {
+            Optional<User> user;
+            if (userId != -1) {
+                user = userRepository.findById(userId);
+                if (user.isEmpty()) {
+                    return new ChangeDTO<>(State.Fail_NotFound, "User not found", null);
+                }
+            } else user = null;
             log.info("Deleting book with ID: {}", id);
 
             if (!bookRepository.existsById(id)) {
                 log.warn("Book not found with ID: {}", id);
                 return new ChangeDTO<>(State.Fail_NotFound,
                         "Book not found", null);
+            }
+
+            if(user != null &&  user.get() != bookRepository.findById(id).get().getAddedBy()) {
+                return new  ChangeDTO<>(State.Fail_Forbidden, "Invalid user", null);
             }
 
             bookRepository.deleteById(id);

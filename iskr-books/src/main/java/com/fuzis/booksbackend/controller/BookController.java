@@ -22,8 +22,9 @@ public class BookController {
 
     @PostMapping
     public ResponseEntity<ChangeDTO<Object>> createBook(
+            @RequestHeader Integer userId,
             @Valid @RequestBody BookCreateDTO bookCreateDTO) {
-        return httpUtil.handleServiceResponse(bookService.createBook(bookCreateDTO));
+        return httpUtil.handleServiceResponse(bookService.createBook(userId, bookCreateDTO));
     }
 
     @GetMapping("/{id}")
@@ -42,15 +43,17 @@ public class BookController {
 
     @PutMapping("/{id}")
     public ResponseEntity<ChangeDTO<Object>> updateBook(
+            @RequestHeader Integer userId,
             @PathVariable @Min(1) Integer id,
             @Valid @RequestBody BookUpdateDTO bookUpdateDTO) {
-        return httpUtil.handleServiceResponse(bookService.updateBook(id, bookUpdateDTO));
+        return httpUtil.handleServiceResponse(bookService.updateBook(userId, id, bookUpdateDTO));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<ChangeDTO<Object>> deleteBook(
+            @RequestHeader Integer userId,
             @PathVariable @Min(1) Integer id) {
-        return httpUtil.handleServiceResponse(bookService.deleteBook(id));
+        return httpUtil.handleServiceResponse(bookService.deleteBook(userId, id));
     }
 
     @GetMapping

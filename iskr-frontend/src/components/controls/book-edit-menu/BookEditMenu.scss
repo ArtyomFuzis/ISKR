@@ -1,0 +1,90 @@
+// /src/components/controls/book-edit-menu/BookEditMenu.scss
+@use '../../../_index.scss' as *;
+
+.book-edit-menu {
+  background: #1a1a1a;
+  border-radius: 12px;
+  padding: 2rem;
+  max-width: 500px;
+  width: 100%;
+  border: 2px solid $pink;
+  
+  .book-edit-title {
+    color: #FFFFFF;
+    font-size: 1.8rem;
+    margin-bottom: 1.5rem;
+    text-align: center;
+    font-weight: bold;
+  }
+}
+
+.book-edit-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+  
+  .book-edit-option {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(233, 69, 96, 0.3);
+    border-radius: 8px;
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: left;
+    
+    &:hover {
+      background: rgba(233, 69, 96, 0.1);
+      border-color: $pink;
+      transform: translateX(4px);
+      
+      .option-icon {
+        color: $pink;
+        transform: translateX(4px);
+      }
+    }
+    
+    .option-content {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      
+      .option-title {
+        color: #FFFFFF;
+        font-size: 1.1rem;
+        font-weight: 500;
+      }
+      
+      .option-subtitle {
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 0.9rem;
+      }
+    }
+    
+    .option-icon {
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 1.2rem;
+      transition: all 0.2s ease;
+    }
+  }
+}
+
+.book-edit-close {
+  width: 100%;
+  padding: 0.75rem;
+  background: rgba(233, 69, 96, 0.1);
+  border: 1px solid rgba(233, 69, 96, 0.3);
+  border-radius: 8px;
+  color: #FFFFFF;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: rgba(233, 69, 96, 0.2);
+    border-color: $pink;
+  }
+}

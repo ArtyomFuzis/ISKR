@@ -51,14 +51,6 @@ export interface SearchGenreData {
   name: string;
 }
 
-export interface SearchResultItem {
-  id: string;
-  type: 'book' | 'user' | 'collection' | 'genre'; // добавляем 'genre'
-  score: number;
-  data: SearchBookData | SearchCollectionData | SearchUserData | SearchGenreData;
-  highlights: any;
-}
-
 export interface SearchResponse {
   data: {
     query: string;
@@ -72,4 +64,25 @@ export interface SearchResponse {
     processedBy: string;
     userId: string;
   };
+}
+
+export interface SearchAuthorData {
+  id: number;
+  name: string;
+  realName?: string;
+  description?: string;
+}
+
+export interface SearchGenreData {
+  id: number;
+  name: string;
+}
+
+// Обновляем SearchResultItem
+export interface SearchResultItem {
+  id: string;
+  type: 'book' | 'user' | 'collection' | 'author' | 'genre';
+  score: number;
+  data: SearchBookData | SearchCollectionData | SearchUserData | SearchAuthorData | SearchGenreData;
+  highlights: any;
 }

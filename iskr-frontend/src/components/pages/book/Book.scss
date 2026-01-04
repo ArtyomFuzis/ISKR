@@ -2,557 +2,578 @@
 @use '../../../_index.scss' as *;
 
 .book-page-container {
-  margin-bottom: 4rem;
-  position: relative;
+    margin-bottom: 4rem;
+    position: relative;
 }
 
 .page-close-button {
-  position: absolute;
-  top: 10px;
-  right: 20px;
-  background: none;
-  border: none;
-  font-size: 24px;
-  cursor: pointer;
-  color: #ffffff;
-  transition: transform 0.2s, color 0.2s;
+    position: absolute;
+    top: 10px;
+    right: 20px;
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #ffffff;
+    transition: transform 0.2s, color 0.2s;
 
-  &:hover {
-    color: $pink;
-    transform: scale(1.1);
-  }
-
-  &[data-tooltip] {
-    &::before {
-      content: attr(data-tooltip);
-      position: absolute;
-      top: 100%;
-      right: 0;
-      margin-top: 8px;
-      padding: 6px 10px;
-      background: rgba(0, 0, 0, 0.9);
-      color: #ffffff;
-      font-size: 14px;
-      white-space: nowrap;
-      border-radius: 4px;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.2s, transform 0.2s;
-      transform: translateY(-4px);
-      z-index: 1000;
+    &:hover {
+        color: $pink;
+        transform: scale(1.1);
     }
 
-    &::after {
-      content: '';
-      position: absolute;
-      top: 100%;
-      right: 12px;
-      margin-top: 4px;
-      border: 4px solid transparent;
-      border-bottom-color: rgba(0, 0, 0, 0.9);
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.2s, transform 0.2s;
-      transform: translateY(-4px);
-      z-index: 1000;
-    }
+    &[data-tooltip] {
+        &::before {
+            content: attr(data-tooltip);
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 8px;
+            padding: 6px 10px;
+            background: rgba(0, 0, 0, 0.9);
+            color: #ffffff;
+            font-size: 14px;
+            white-space: nowrap;
+            border-radius: 4px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s, transform 0.2s;
+            transform: translateY(-4px);
+            z-index: 1000;
+        }
 
-    &:hover::before,
-    &:hover::after {
-      opacity: 1;
-      transform: translateY(0);
+        &::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            right: 12px;
+            margin-top: 4px;
+            border: 4px solid transparent;
+            border-bottom-color: rgba(0, 0, 0, 0.9);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s, transform 0.2s;
+            transform: translateY(-4px);
+            z-index: 1000;
+        }
+
+        &:hover::before,
+        &:hover::after {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
-  }
 }
 
 .book-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 2rem;
-
-  .book-title-section {
-    .book-title {
-      font-size: 2rem;
-      margin: 0 0 1rem 0;
-      color: white;
-    }
-
-    .book-rating-badge {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-
-      .reviews-count {
-        font-size: 0.875rem;
-        color: rgba(255, 255, 255, 0.7);
-        background: rgba($pink, 0.1);
-        padding: 0.25rem 0.75rem;
-        border-radius: 12px;
-        border: 1px solid rgba($pink, 0.3);
-      }
-    }
-  }
-
-  .book-actions {
     display: flex;
-    gap: 0.5rem;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 2rem;
 
-    button {
-      background: none;
-      border: none;
-      cursor: pointer;
-      padding: 0.5rem;
-      border-radius: 4px;
-      transition: background 0.2s;
+    .book-title-section {
+        .book-title {
+            font-size: 2rem;
+            margin: 0 0 0.5rem 0; // Уменьшаем отступ снизу
+            color: white;
+        }
 
-      &:hover {
-        background: rgba($pink, 0.1);
-      }
+        .book-subtitle {
+            font-size: 1.25rem;
+            margin: 0 0 1rem 0;
+            color: rgba(255, 255, 255, 0.7);
+            font-weight: normal;
+            font-style: italic;
+        }
 
-      img {
-        height: 1.5rem;
-        width: 1.5rem;
-      }
+        .book-rating-badge {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+
+            .reviews-count {
+                font-size: 0.875rem;
+                color: rgba(255, 255, 255, 0.7);
+                background: rgba($pink, 0.1);
+                padding: 0.25rem 0.75rem;
+                border-radius: 12px;
+                border: 1px solid rgba($pink, 0.3);
+            }
+        }
     }
-  }
+
+    .book-actions {
+        display: flex;
+        gap: 0.5rem;
+
+        button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 4px;
+            transition: background 0.2s;
+
+            &:hover {
+                background: rgba($pink, 0.1);
+            }
+
+            img {
+                height: 1.5rem;
+                width: 1.5rem;
+            }
+        }
+    }
 }
 
 .book-content {
-  .book-main-info {
-    display: grid;
-    grid-template-columns: 300px 1fr;
-    gap: 3rem;
-    margin-bottom: 3rem;
+    .book-main-info {
+        display: grid;
+        grid-template-columns: 300px 1fr;
+        gap: 3rem;
+        margin-bottom: 3rem;
 
-    @media (max-width: 1024px) {
-      grid-template-columns: 1fr;
-      gap: 2rem;
+        @media (max-width: 1024px) {
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
     }
-  }
 }
 
 .book-cover-section {
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
-
-  .book-cover {
-    width: 100%;
-    height: auto;
-    max-height: 400px;
-    object-fit: contain;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  }
-
-  .book-rating-section {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
-    padding: 1.5rem;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba($pink, 0.2);
-    border-radius: 8px;
+    gap: 2rem;
 
-    .rating-title {
-      font-size: 1rem;
-      color: rgba(255, 255, 255, 0.8);
+    .book-cover {
+        width: 100%;
+        height: auto;
+        max-height: 400px;
+        object-fit: contain;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     }
 
-    button {
-      margin-top: 1rem;
+    .book-rating-section {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        padding: 1.5rem;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba($pink, 0.2);
+        border-radius: 8px;
+
+        .rating-title {
+            font-size: 1rem;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        button {
+            margin-top: 1rem;
+        }
     }
-  }
 }
 
 .book-details-section {
-  .book-details-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1.5rem;
-    margin-bottom: 2rem;
+    .book-details-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+        margin-bottom: 2rem;
 
-    @media (max-width: 768px) {
-      grid-template-columns: 1fr;
+        @media (max-width: 768px) {
+            grid-template-columns: 1fr;
+        }
+
+        .detail-group {
+            &.full-width {
+                grid-column: 1 / -1;
+            }
+
+            label {
+                display: block;
+                color: $pink;
+                font-size: 0.875rem;
+                margin-bottom: 0.5rem;
+                font-weight: 500;
+            }
+
+            .field-value {
+                display: block;
+                padding: 0.75rem;
+                background: rgba(255, 255, 255, 0.05);
+                border: 1px solid rgba($pink, 0.1);
+                border-radius: 4px;
+                color: white;
+                font-size: 1rem;
+
+                &.description-text {
+                    line-height: 1.6;
+                    white-space: pre-wrap;
+                }
+            }
+
+            .authors-list {
+                display: flex;
+                flex-direction: column;
+                gap: 0.5rem;
+
+                .author-item {
+                    padding: 0.75rem;
+                    background: rgba(255, 255, 255, 0.05);
+                    border: 1px solid rgba($pink, 0.1);
+                    border-radius: 4px;
+
+                    .author-name {
+                        font-weight: 500;
+                        color: white;
+                        margin-right: 0.5rem;
+                    }
+
+                    .author-real-name {
+                        color: rgba(255, 255, 255, 0.6);
+                        font-size: 0.9rem;
+                    }
+                }
+            }
+
+            .genres-list {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+
+                .genre-tag {
+                    padding: 0.5rem 1rem;
+                    background: rgba($pink, 0.1);
+                    border: 1px solid rgba($pink, 0.3);
+                    border-radius: 20px;
+                    color: $pink;
+                    font-size: 0.875rem;
+                }
+            }
+
+            .added-by {
+                display: flex;
+                align-items: center;
+                gap: 1rem;
+                padding: 0.75rem;
+                background: rgba(255, 255, 255, 0.05);
+                border: 1px solid rgba($pink, 0.1);
+                border-radius: 4px;
+                cursor: pointer;
+                transition: all 0.2s;
+
+                &:hover {
+                    background: rgba($pink, 0.1);
+                    border-color: $pink;
+
+                    .added-by-name {
+                        color: $pink;
+                    }
+                }
+
+                .added-by-avatar {
+                    width: 40px;
+                    height: 40px;
+                    border-radius: 50%;
+                    object-fit: cover;
+                }
+
+                .added-by-name {
+                    font-weight: 500;
+                    color: white;
+                }
+            }
+        }
     }
 
-    .detail-group {
-      &.full-width {
-        grid-column: 1 / -1;
-      }
-
-      label {
-        display: block;
-        color: $pink;
-        font-size: 0.875rem;
-        margin-bottom: 0.5rem;
-        font-weight: 500;
-      }
-
-      .field-value {
-        display: block;
-        padding: 0.75rem;
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba($pink, 0.1);
-        border-radius: 4px;
-        color: white;
-        font-size: 1rem;
-
-        &.description-text {
-          line-height: 1.6;
-          white-space: pre-wrap;
-        }
-      }
-
-      .authors-list {
+    .book-action-buttons {
         display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-
-        .author-item {
-          padding: 0.75rem;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba($pink, 0.1);
-          border-radius: 4px;
-
-          .author-name {
-            font-weight: 500;
-            color: white;
-            margin-right: 0.5rem;
-          }
-
-          .author-real-name {
-            color: rgba(255, 255, 255, 0.6);
-            font-size: 0.9rem;
-          }
-        }
-      }
-
-      .genres-list {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-
-        .genre-tag {
-          padding: 0.5rem 1rem;
-          background: rgba($pink, 0.1);
-          border: 1px solid rgba($pink, 0.3);
-          border-radius: 20px;
-          color: $pink;
-          font-size: 0.875rem;
-        }
-      }
-
-      .added-by {
-        display: flex;
-        align-items: center;
         gap: 1rem;
-        padding: 0.75rem;
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba($pink, 0.1);
-        border-radius: 4px;
-        cursor: pointer;
-        transition: all 0.2s;
+        margin-top: 2rem;
 
-        &:hover {
-          background: rgba($pink, 0.1);
-          border-color: $pink;
-
-          .added-by-name {
-            color: $pink;
-          }
+        @media (max-width: 768px) {
+            flex-direction: column;
         }
-
-        .added-by-avatar {
-          width: 40px;
-          height: 40px;
-          border-radius: 50%;
-          object-fit: cover;
-        }
-
-        .added-by-name {
-          font-weight: 500;
-          color: white;
-        }
-      }
     }
-  }
-
-  .book-action-buttons {
-    display: flex;
-    gap: 1rem;
-    margin-top: 2rem;
-
-    @media (max-width: 768px) {
-      flex-direction: column;
-    }
-  }
 }
 
-.book-edit-buttons {
-  display: flex;
-  gap: 1rem;
-  margin-top: 2rem;
-}
-
-.book-description {
-  border: 1px solid rgba($pink, 0.3);
-  border-radius: 4px;
-  padding: 0.75rem;
-  background: transparent;
-  width: 100%;
-  color: white;
-  font-size: 1rem;
-  line-height: 1.6;
-  resize: vertical;
-  min-height: 120px;
-
-  &::placeholder {
-    color: rgba(255, 255, 255, 0.5);
-  }
-
-  &:focus {
-    outline: none;
-    border-color: $pink;
-  }
-}
 
 .book-reading-stats {
-  margin: 3rem 0;
-  padding: 2rem;
-  background: rgba($pink, 0.05);
-  border: 1px solid rgba($pink, 0.2);
-  border-radius: 8px;
+    margin: 3rem 0;
+    padding: 2rem;
+    background: rgba($pink, 0.05);
+    border: 1px solid rgba($pink, 0.2);
+    border-radius: 8px;
 
-  h3 {
-    font-size: 1.25rem;
-    margin: 0 0 1.5rem 0;
-    color: $pink;
-  }
-
-  .reading-stats-content {
-    .reading-progress {
-      margin-bottom: 1.5rem;
-
-      .progress-bar {
-        width: 100%;
-        height: 12px;
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 6px;
-        overflow: hidden;
-        margin-bottom: 0.75rem;
-
-        .progress-fill {
-          height: 100%;
-          background: linear-gradient(90deg, $pink, #C72C41);
-          border-radius: 6px;
-          transition: width 0.3s ease;
-        }
-      }
-
-      .progress-text {
-        display: flex;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 0.25rem;
-        font-size: 0.9rem;
-
-        .pages-read {
-          font-weight: bold;
-          color: $pink;
-        }
-
-        .pages-separator {
-          color: rgba(255, 255, 255, 0.7);
-        }
-
-        .pages-total {
-          font-weight: bold;
-          color: white;
-        }
-
-        .pages-label {
-          color: rgba(255, 255, 255, 0.7);
-        }
-
-        .percentage {
-          color: rgba(255, 255, 255, 0.6);
-          margin-left: 0.5rem;
-        }
-      }
+    h3 {
+        font-size: 1.25rem;
+        margin: 0 0 1.5rem 0;
+        color: $pink;
     }
 
-    .last-read-info {
-      display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
-      padding-top: 1rem;
-      border-top: 1px solid rgba($pink, 0.2);
+    .reading-stats-content {
+        .reading-progress {
+            margin-bottom: 1.5rem;
 
-      .last-read-label {
-        font-size: 0.85rem;
-        color: rgba(255, 255, 255, 0.7);
-      }
+            .progress-bar {
+                width: 100%;
+                height: 12px;
+                background: rgba(255, 255, 255, 0.1);
+                border-radius: 6px;
+                overflow: hidden;
+                margin-bottom: 0.75rem;
 
-      .last-read-date {
-        font-size: 0.9rem;
-        color: white;
-        font-weight: 500;
-      }
+                .progress-fill {
+                    height: 100%;
+                    background: linear-gradient(90deg, $pink, #C72C41);
+                    border-radius: 6px;
+                    transition: width 0.3s ease;
+                }
+            }
+
+            .progress-text {
+                display: flex;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 0.25rem;
+                font-size: 0.9rem;
+
+                .pages-read {
+                    font-weight: bold;
+                    color: $pink;
+                }
+
+                .pages-separator {
+                    color: rgba(255, 255, 255, 0.7);
+                }
+
+                .pages-total {
+                    font-weight: bold;
+                    color: white;
+                }
+
+                .pages-label {
+                    color: rgba(255, 255, 255, 0.7);
+                }
+
+                .percentage {
+                    color: rgba(255, 255, 255, 0.6);
+                    margin-left: 0.5rem;
+                }
+            }
+        }
+
+        .last-read-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba($pink, 0.2);
+
+            .last-read-label {
+                font-size: 0.85rem;
+                color: rgba(255, 255, 255, 0.7);
+            }
+
+            .last-read-date {
+                font-size: 0.9rem;
+                color: white;
+                font-weight: 500;
+            }
+        }
     }
-  }
 }
 
 .book-reviews-section {
-  margin-top: 4rem;
-  padding-top: 2rem;
-  border-top: 1px solid rgba($pink, 0.2);
+    margin-top: 4rem;
+    padding-top: 2rem;
+    border-top: 1px solid rgba($pink, 0.2);
 
-  .reviews-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 2rem;
-
-    h3 {
-      font-size: 1.5rem;
-      margin: 0;
-      color: white;
-    }
-
-    .reviews-count {
-      font-size: 0.9rem;
-      color: rgba(255, 255, 255, 0.7);
-    }
-  }
-
-  .reviews-list {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-  }
-
-  .review-card {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba($pink, 0.1);
-    border-radius: 8px;
-    padding: 1.5rem;
-
-    .review-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 1rem;
-
-      @media (max-width: 768px) {
-        flex-direction: column;
-        gap: 1rem;
-      }
-
-      .review-user {
+    .reviews-header {
         display: flex;
         align-items: center;
-        gap: 1rem;
-        cursor: pointer;
+        justify-content: space-between;
+        margin-bottom: 2rem;
 
-        &:hover .review-user-name {
-          color: $pink;
-        }
-
-        .review-user-avatar {
-          width: 48px;
-          height: 48px;
-          border-radius: 50%;
-          object-fit: cover;
-        }
-
-        .review-user-info {
-          display: flex;
-          flex-direction: column;
-
-          .review-user-name {
-            font-weight: 500;
+        h3 {
+            font-size: 1.5rem;
+            margin: 0;
             color: white;
-            transition: color 0.2s;
-          }
-
-          .review-date {
-            font-size: 0.8rem;
-            color: rgba(255, 255, 255, 0.6);
-          }
         }
-      }
+
+        .reviews-count {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
     }
 
-    .review-content {
-      .review-text {
-        margin: 0;
-        color: rgba(255, 255, 255, 0.9);
-        line-height: 1.6;
-      }
+    .reviews-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
     }
-  }
 
-  .no-reviews-message {
-    text-align: center;
-    padding: 3rem;
-    color: rgba(255, 255, 255, 0.5);
-    font-style: italic;
-    font-size: 1.125rem;
-  }
+    .review-card {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba($pink, 0.1);
+        border-radius: 8px;
+        padding: 1.5rem;
+
+        .review-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+
+            @media (max-width: 768px) {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .review-user {
+                display: flex;
+                align-items: center;
+                gap: 1rem;
+                cursor: pointer;
+
+                &:hover .review-user-name {
+                    color: $pink;
+                }
+
+                .review-user-avatar {
+                    width: 48px;
+                    height: 48px;
+                    border-radius: 50%;
+                    object-fit: cover;
+                }
+
+                .review-user-info {
+                    display: flex;
+                    flex-direction: column;
+
+                    .review-user-name {
+                        font-weight: 500;
+                        color: white;
+                        transition: color 0.2s;
+                    }
+
+                    .review-date {
+                        font-size: 0.8rem;
+                        color: rgba(255, 255, 255, 0.6);
+                    }
+                }
+            }
+        }
+
+        .review-content {
+            .review-text {
+                margin: 0;
+                color: rgba(255, 255, 255, 0.9);
+                line-height: 1.6;
+            }
+        }
+    }
+
+    .no-reviews-message {
+        text-align: center;
+        padding: 3rem;
+        color: rgba(255, 255, 255, 0.5);
+        font-style: italic;
+        font-size: 1.125rem;
+    }
 }
 
 .load-more-container {
-  display: flex;
-  justify-content: center;
-  margin-top: 3rem;
-  padding-top: 2rem;
-  border-top: 1px solid rgba($pink, 0.1);
+    display: flex;
+    justify-content: center;
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid rgba($pink, 0.1);
 
-  button {
-    min-width: 200px;
-  }
+    button {
+        min-width: 200px;
+    }
 }
 
 // Стили для состояний загрузки и ошибок
 .loading-state,
 .error-state {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  min-height: 400px;
-  gap: 1rem;
-  padding: 3rem;
-  text-align: center;
-
-  .loading-spinner {
-    width: 40px;
-    height: 40px;
-    border: 3px solid rgba($pink, 0.3);
-    border-top: 3px solid $pink;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-  }
-
-  p {
-    color: rgba(255, 255, 255, 0.7);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 400px;
+    gap: 1rem;
+    padding: 3rem;
     text-align: center;
-  }
+
+    .loading-spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid rgba($pink, 0.3);
+        border-top: 3px solid $pink;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    p {
+        color: rgba(255, 255, 255, 0.7);
+        text-align: center;
+    }
 }
 
 .error-state {
-  p {
-    color: #ff4444;
-  }
+    p {
+        color: #ff4444;
+    }
 
-  button {
-    margin-top: 1rem;
-  }
+    button {
+        margin-top: 1rem;
+    }
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.detail-group {
+  &.full-width {
+    grid-column: 1 / -1;
+  }
+
+  label {
+    display: block;
+    color: $pink;
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+  }
+
+  .field-value {
+    display: block;
+    padding: 0.75rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba($pink, 0.1);
+    border-radius: 4px;
+    color: white;
+    font-size: 1rem;
+
+    &.description-text {
+      line-height: 1.6;
+      white-space: pre-wrap;
+    }
+  }
+
+  // Добавим стиль для поля "Количество страниц"
+  &:has(#pages) .field-value {
+    font-weight: 500;
+    color: $pink;
+  }
 }

@@ -22,7 +22,6 @@ import {useLocation, useNavigate} from "react-router-dom";
 import {useSelector} from "react-redux";
 import type {RootState} from "../../../redux/store.ts";
 import libraryAPI, { type LibraryBook, type LibraryCollection } from '../../../api/libraryService';
-import { getImageUrl } from '../../../api/popularService';
 import PlaceholderImage from '../../../assets/images/placeholder.jpg';
 import Avatar1 from '../../../assets/images/users/avatar1.jpg';
 import Avatar2 from '../../../assets/images/users/avatar2.jpg';
@@ -40,7 +39,7 @@ interface Book {
   author: string;
   rating?: number;
   imageUrl: string;
-  originalBook?: LibraryBook; // Сохраняем оригинальный объект для возможного использования
+  originalBook?: LibraryBook;
 }
 
 interface Collection {
@@ -49,7 +48,7 @@ interface Collection {
   creator: string;
   booksCount: number;
   imageUrl: string;
-  originalCollection?: LibraryCollection; // Сохраняем оригинальный объект
+  originalCollection?: LibraryCollection;
 }
 
 function Library() {
@@ -74,16 +73,36 @@ function Library() {
   const [loadingWishlist, setLoadingWishlist] = useState(true);
   const [loadingError, setLoadingError] = useState<string | null>(null);
 
+  // Функция для получения URL изображения книги
+  const getBookImageUrl = (book: LibraryBook): string => {
+    if (!book.photoLink?.imageData?.uuid || !book.photoLink?.imageData?.extension) {
+      console.log(`No image for book: ${book.title}`, book.photoLink);
+      return PlaceholderImage;
+    }
+    
+    const url = `/images/${book.photoLink.imageData.uuid}.${book.photoLink.imageData.extension}`;
+    console.log(`Book image URL for ${book.title}:`, url);
+    return url;
+  };
+
+  // Функция для получения URL изображения коллекции
+  const getCollectionImageUrl = (collection: LibraryCollection): string => {
+    if (!collection.photoLink?.imageData?.uuid || !collection.photoLink?.imageData?.extension) {
+      console.log(`No image for collection: ${collection.title}`, collection.photoLink);
+      return PlaceholderImage;
+    }
+    
+    const url = `/images/${collection.photoLink.imageData.uuid}.${collection.photoLink.imageData.extension}`;
+    console.log(`Collection image URL for ${collection.title}:`, url);
+    return url;
+  };
+
   // Функция для преобразования LibraryBook в Book
   const transformLibraryBookToBook = (libBook: LibraryBook): Book => {
     const authors = libBook.authors.map(a => a.name).join(', ');
-    const rating = libBook.averageRating ? libBook.averageRating / 2 : undefined; // Конвертируем из 10-балльной в 5-балльную
+    const rating = libBook.averageRating ? libBook.averageRating / 2 : undefined;
     
-    let imageUrl = PlaceholderImage;
-    if (libBook.photoLink?.imageData?.uuid) {
-      const url = getImageUrl(libBook.photoLink.imageData.uuid);
-      if (url) imageUrl = url;
-    }
+    const imageUrl = getBookImageUrl(libBook);
     
     return {
       id: libBook.bookId.toString(),
@@ -97,11 +116,7 @@ function Library() {
 
   // Функция для преобразования LibraryCollection в Collection
   const transformLibraryCollectionToCollection = (libCollection: LibraryCollection): Collection => {
-    let imageUrl = PlaceholderImage;
-    if (libCollection.photoLink?.imageData?.uuid) {
-      const url = getImageUrl(libCollection.photoLink.imageData.uuid);
-      if (url) imageUrl = url;
-    }
+    const imageUrl = getCollectionImageUrl(libCollection);
     
     return {
       id: libCollection.bcolsId.toString(),
@@ -118,6 +133,8 @@ function Library() {
     try {
       setLoadingError(null);
       
+      console.log("Начинаем загрузку данных библиотеки...");
+      
       // Загружаем все данные параллельно
       const [booksData, collectionsData, wishlistData] = await Promise.allSettled([
         libraryAPI.getLibraryBooks(),
@@ -127,6 +144,7 @@ function Library() {
       
       // Обработка книг
       if (booksData.status === 'fulfilled') {
+        console.log("Книги загружены:", booksData.value);
         setLibraryBooks(booksData.value);
         const transformedBooks = booksData.value.map(transformLibraryBookToBook);
         setBooks(transformedBooks);
@@ -137,6 +155,7 @@ function Library() {
       
       // Обработка коллекций
       if (collectionsData.status === 'fulfilled') {
+        console.log("Коллекции загружены:", collectionsData.value);
         setLibraryCollections(collectionsData.value);
         const transformedCollections = collectionsData.value.map(transformLibraryCollectionToCollection);
         setCollections(transformedCollections);
@@ -147,6 +166,7 @@ function Library() {
       
       // Обработка вишлиста
       if (wishlistData.status === 'fulfilled') {
+        console.log("Вишлист загружен:", wishlistData.value.books);
         setWishlistBooks(wishlistData.value.books);
         setWishlistId(wishlistData.value.wishlistId);
         const transformedWishlist = wishlistData.value.books.map(transformLibraryBookToBook);

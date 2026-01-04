@@ -2,8 +2,9 @@ import { createSlice, createAsyncThunk, type PayloadAction } from '@reduxjs/tool
 import { authAPI, type LoginData, type RegisterData, type UserData, type ResetPasswordConfirmData, type RegisterResponse, type RedeemTokenData } from '../api/authService';
 import { API_STATES, ERROR_STATUSES } from '../constants/api';
 
-export interface User extends UserData {
+export interface User {
   id: string | number;
+  userId?: number; // Добавляем поле userId для совместимости
   username: string;
   nickname?: string;
   email?: string;
@@ -59,10 +60,10 @@ export const login = createAsyncThunk(
       const response = await authAPI.login(credentials);
       return response;
     } catch (error: any) {
-      let errorMessage = error.response?.data?.data?.message || 
-                        error.response?.data?.message || 
-                        error.message || 
-                        'Ошибка входа';
+      let errorMessage = error.response?.data?.data?.message ||
+        error.response?.data?.message ||
+        error.message ||
+        'Ошибка входа';
 
       if (errorMessage === 'Invalid credentials') {
         errorMessage = 'Неверный логин или пароль';
@@ -83,7 +84,7 @@ export const signUp = createAsyncThunk(
       return response;
     } catch (error: any) {
       let errorMessage = 'Ошибка регистрации';
-      
+
       if (error.response?.status === ERROR_STATUSES.CONFLICT) {
         const details = error.response?.data?.data?.details;
         if (details?.state === API_STATES.FAIL_CONFLICT) {
@@ -104,7 +105,7 @@ export const signUp = createAsyncThunk(
       } else if (error.response?.data?.data?.message) {
         errorMessage = error.response.data.data.message;
       }
-      
+
       return rejectWithValue(errorMessage);
     }
   }
@@ -118,11 +119,11 @@ export const resetPassword = createAsyncThunk(
       const response = await authAPI.resetPassword(login);
       return response;
     } catch (error: any) {
-      let errorMessage = error.response?.data?.data?.message || 
-                        error.response?.data?.message || 
-                        error.message || 
-                        'Ошибка при восстановлении пароля';
-      
+      let errorMessage = error.response?.data?.data?.message ||
+        error.response?.data?.message ||
+        error.message ||
+        'Ошибка при восстановлении пароля';
+
       return rejectWithValue(errorMessage);
     }
   }
@@ -134,7 +135,7 @@ export const resetPasswordConfirm = createAsyncThunk(
   async (data: ResetPasswordConfirmData, { rejectWithValue }) => {
     try {
       const response = await authAPI.resetPasswordConfirm(data);
-      
+
       // Проверяем статус ответа
       if (response.data.state === API_STATES.OK) {
         return response;
@@ -146,15 +147,15 @@ export const resetPasswordConfirm = createAsyncThunk(
         return rejectWithValue(response.data.message || 'Ошибка при сбросе пароля');
       }
     } catch (error: any) {
-      let errorMessage = error.response?.data?.data?.message || 
-                        error.response?.data?.message || 
-                        error.message || 
-                        'Ошибка при сбросе пароля';
-      
+      let errorMessage = error.response?.data?.data?.message ||
+        error.response?.data?.message ||
+        error.message ||
+        'Ошибка при сбросе пароля';
+
       if (error.response?.status === 404) {
         errorMessage = 'Недействительная ссылка для сброса пароля';
       }
-      
+
       return rejectWithValue(errorMessage);
     }
   }
@@ -166,7 +167,7 @@ export const redeemToken = createAsyncThunk(
   async (data: RedeemTokenData, { rejectWithValue }) => {
     try {
       const response = await authAPI.redeemToken(data);
-      
+
       // Проверяем статус ответа
       if (response.data.state === API_STATES.OK) {
         return response;
@@ -176,16 +177,16 @@ export const redeemToken = createAsyncThunk(
         return rejectWithValue(response.data.message || 'Ошибка при подтверждении email');
       }
     } catch (error: any) {
-      let errorMessage = error.response?.data?.data?.message || 
-                        error.response?.data?.message || 
-                        error.message || 
-                        'Ошибка при подтверждении email';
-      
+      let errorMessage = error.response?.data?.data?.message ||
+        error.response?.data?.message ||
+        error.message ||
+        'Ошибка при подтверждении email';
+
       // Обработка 404 ошибки
       if (error.response?.status === 404) {
         errorMessage = 'Недействительная ссылка для подтверждения email';
       }
-      
+
       return rejectWithValue(errorMessage);
     }
   }
@@ -201,11 +202,11 @@ export const checkAuth = createAsyncThunk(
     } catch (error: any) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      
-      const errorMessage = error.response?.status === 404 
-        ? 'Сессия истекла' 
+
+      const errorMessage = error.response?.status === 404
+        ? 'Сессия истекла'
         : 'Не авторизован';
-      
+
       return rejectWithValue(errorMessage);
     }
   }
@@ -257,15 +258,21 @@ const authSlice = createSlice({
       .addCase(login.fulfilled, (state, action) => {
         state.isLoading = false;
         state.isAuthenticated = true;
-        state.user = action.payload.user;
+        state.user = {
+          ...action.payload.user,
+          userId: action.payload.user.id // Добавляем userId для совместимости
+        };
         state.token = action.payload.token;
-        
+
         try {
           if (action.payload.token) {
             localStorage.setItem('token', action.payload.token);
           }
           if (action.payload.user) {
-            localStorage.setItem('user', JSON.stringify(action.payload.user));
+            localStorage.setItem('user', JSON.stringify({
+              ...action.payload.user,
+              userId: action.payload.user.id
+            }));
           }
         } catch (error) {
           console.error('Error saving to localStorage:', error);
@@ -275,7 +282,7 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload as string;
       })
-      
+
       // Регистрация
       .addCase(signUp.pending, (state) => {
         state.isLoading = true;
@@ -292,7 +299,7 @@ const authSlice = createSlice({
         state.error = action.payload as string;
         state.registrationSuccess = false;
       })
-      
+
       // Восстановление пароля
       .addCase(resetPassword.pending, (state) => {
         state.isLoading = true;
@@ -305,7 +312,7 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload as string;
       })
-      
+
       // Подтверждение сброса пароля
       .addCase(resetPasswordConfirm.pending, (state) => {
         state.isLoading = true;
@@ -318,7 +325,7 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload as string;
       })
-      
+
       // Подтверждение email по токену
       .addCase(redeemToken.pending, (state) => {
         state.isLoading = true;
@@ -335,7 +342,7 @@ const authSlice = createSlice({
         state.error = action.payload as string;
         state.emailVerificationSuccess = false;
       })
-      
+
       // Проверка авторизации
       .addCase(checkAuth.pending, (state) => {
         state.isLoading = true;
@@ -344,11 +351,17 @@ const authSlice = createSlice({
       .addCase(checkAuth.fulfilled, (state, action) => {
         state.isLoading = false;
         state.isAuthenticated = true;
-        state.user = action.payload;
-        
+        state.user = {
+          ...action.payload,
+          userId: action.payload.id // Добавляем userId
+        };
+
         try {
           if (action.payload) {
-            localStorage.setItem('user', JSON.stringify(action.payload));
+            localStorage.setItem('user', JSON.stringify({
+              ...action.payload,
+              userId: action.payload.id
+            }));
           }
         } catch (error) {
           console.error('Error saving user to localStorage:', error);
@@ -360,7 +373,7 @@ const authSlice = createSlice({
         state.user = null;
         state.token = null;
         state.error = action.payload as string;
-        
+
         try {
           localStorage.removeItem('token');
           localStorage.removeItem('user');
