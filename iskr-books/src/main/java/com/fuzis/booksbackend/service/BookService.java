@@ -256,7 +256,7 @@ public class BookService {
                             List<Genre> genres = genreRepository.findByGenreIdIn(
                                     dto.getGenreIds().stream().toList()
                             );
-                            if (genres.size() != dto.getAuthorIds().size()) {
+                            if (genres.size() != dto.getGenreIds().size()) {
                                 log.warn("Some genres not found for IDs: {}", dto.getGenreIds());
                                 return new ChangeDTO<>(State.Fail_NotFound,
                                         "Some genres not found", null);
@@ -361,6 +361,157 @@ public class BookService {
         }
     }
 
+    @Transactional
+    public ChangeDTO<Object> createBookReview(Integer userId, Integer bookId, BookReviewRequestDTO dto) {
+        try {
+            log.info("Creating review for book ID: {} by user ID: {}", bookId, userId);
+
+            // Проверяем существование книги
+            Optional<Book> bookOpt = bookRepository.findById(bookId);
+            if (bookOpt.isEmpty()) {
+                log.warn("Book not found with ID: {}", bookId);
+                return new ChangeDTO<>(State.Fail_NotFound, "Book not found", null);
+            }
+
+            // Проверяем существование пользователя
+            Optional<User> userOpt = userRepository.findById(userId);
+            if (userOpt.isEmpty()) {
+                log.warn("User not found with ID: {}", userId);
+                return new ChangeDTO<>(State.Fail_NotFound, "User not found", null);
+            }
+
+            // Проверяем, не оставлял ли уже пользователь отзыв на эту книгу
+            if (bookReviewRepository.existsByUser_UserIdAndBook_BookId(userId, bookId)) {
+                log.warn("User {} already has a review for book {}", userId, bookId);
+                return new ChangeDTO<>(State.Fail_Conflict,
+                        "You have already reviewed this book", null);
+            }
+
+            // Создаем отзыв
+            BookReview bookReview = BookReview.builder()
+                    .book(bookOpt.get())
+                    .user(userOpt.get())
+                    .score(dto.getScore())
+                    .reviewText(dto.getReviewText())
+                    .build();
+
+            BookReview savedReview = bookReviewRepository.save(bookReview);
+            log.info("Book review created with ID: {}", savedReview.getRvwId());
+
+            // Преобразуем в DTO для ответа
+            BookReviewDTO reviewDTO = convertToBookReviewDTO(savedReview);
+
+            return new ChangeDTO<>(State.OK, "Review created successfully", reviewDTO);
+
+        } catch (DataIntegrityViolationException e) {
+            log.error("Data integrity violation when creating review: ", e);
+            return handleDataIntegrityViolation(e);
+        } catch (Exception e) {
+            log.error("Error creating review: ", e);
+            return new ChangeDTO<>(State.Fail,
+                    "Error creating review: " + e.getMessage(), null);
+        }
+    }
+
+    @Transactional
+    public ChangeDTO<Object> updateBookReview(Integer userId, Integer bookId, BookReviewRequestDTO dto) {
+        try {
+            log.info("Updating review for book ID: {} by user ID: {}", bookId, userId);
+
+            // Ищем существующий отзыв
+            Optional<BookReview> reviewOpt = bookReviewRepository
+                    .findByUser_UserIdAndBook_BookId(userId, bookId);
+
+            if (reviewOpt.isEmpty()) {
+                log.warn("Review not found for user {} and book {}", userId, bookId);
+                return new ChangeDTO<>(State.Fail_NotFound,
+                        "Review not found. You need to create a review first", null);
+            }
+
+            BookReview review = reviewOpt.get();
+
+            // Обновляем поля
+            if (dto.getScore() != null) {
+                review.setScore(dto.getScore());
+            }
+            if (dto.getReviewText() != null) {
+                review.setReviewText(dto.getReviewText());
+            }
+
+            BookReview updatedReview = bookReviewRepository.save(review);
+            log.info("Book review updated with ID: {}", updatedReview.getRvwId());
+
+            // Преобразуем в DTO для ответа
+            BookReviewDTO reviewDTO = convertToBookReviewDTO(updatedReview);
+
+            return new ChangeDTO<>(State.OK, "Review updated successfully", reviewDTO);
+
+        } catch (DataIntegrityViolationException e) {
+            log.error("Data integrity violation when updating review: ", e);
+            return handleDataIntegrityViolation(e);
+        } catch (Exception e) {
+            log.error("Error updating review: ", e);
+            return new ChangeDTO<>(State.Fail,
+                    "Error updating review: " + e.getMessage(), null);
+        }
+    }
+
+    @Transactional
+    public ChangeDTO<Object> deleteBookReview(Integer userId, Integer bookId) {
+        try {
+            log.info("Deleting review for book ID: {} by user ID: {}", bookId, userId);
+
+            // Ищем существующий отзыв
+            Optional<BookReview> reviewOpt = bookReviewRepository
+                    .findByUser_UserIdAndBook_BookId(userId, bookId);
+
+            if (reviewOpt.isEmpty()) {
+                log.warn("Review not found for user {} and book {}", userId, bookId);
+                return new ChangeDTO<>(State.Fail_NotFound,
+                        "Review not found", null);
+            }
+
+            bookReviewRepository.delete(reviewOpt.get());
+            log.info("Book review deleted for user {} and book {}", userId, bookId);
+
+            return new ChangeDTO<>(State.OK, "Review deleted successfully", null);
+
+        } catch (DataIntegrityViolationException e) {
+            log.error("Data integrity violation when deleting review: ", e);
+            return handleDataIntegrityViolation(e);
+        } catch (Exception e) {
+            log.error("Error deleting review: ", e);
+            return new ChangeDTO<>(State.Fail,
+                    "Error deleting review: " + e.getMessage(), null);
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public ChangeDTO<Object> getBookReviewByUserAndBook(Integer userId, Integer bookId) {
+        try {
+            log.debug("Getting review for book ID: {} by user ID: {}", bookId, userId);
+
+            Optional<BookReview> reviewOpt = bookReviewRepository
+                    .findByUser_UserIdAndBook_BookId(userId, bookId);
+
+            if (reviewOpt.isEmpty()) {
+                log.debug("Review not found for user {} and book {}", userId, bookId);
+                return new ChangeDTO<>(State.Fail_NotFound,
+                        "Review not found", null);
+            }
+
+            // Преобразуем в DTO для ответа
+            BookReviewDTO reviewDTO = convertToBookReviewDTO(reviewOpt.get());
+
+            return new ChangeDTO<>(State.OK, "Review retrieved successfully", reviewDTO);
+
+        } catch (Exception e) {
+            log.error("Error getting review: ", e);
+            return new ChangeDTO<>(State.Fail,
+                    "Error getting review: " + e.getMessage(), null);
+        }
+    }
+
     private ChangeDTO<Object> handleDataIntegrityViolation(DataIntegrityViolationException e) {
         String message = e.getMostSpecificCause().getMessage();
 
@@ -379,6 +530,9 @@ public class BookService {
         } else if (message.contains("unique constraint") && message.contains("books_photo_link_key")) {
             return new ChangeDTO<>(State.Fail_Conflict,
                     "Book with this photo link already exists", null);
+        } else if (message.contains("unique constraint") && message.contains("book_reviews_user_id_book_id_key")) {
+            return new ChangeDTO<>(State.Fail_Conflict,
+                    "You have already reviewed this book", null);
         } else {
             return new ChangeDTO<>(State.Fail_Conflict,
                     "Data integrity violation: " + message, null);
@@ -467,52 +621,6 @@ public class BookService {
         }
     }
 
-    private BookReviewDTO convertToBookReviewDTO(BookReview review) {
-        BookReviewDTO dto = new BookReviewDTO();
-        dto.setReviewId(review.getRvwId());
-        dto.setScore(review.getScore());
-        dto.setReviewText(review.getReviewText());
-
-        // Информация о пользователе
-        User user = review.getUser();
-        if (user != null) {
-            UserDTO userDTO = new UserDTO();
-            userDTO.setUserId(user.getUserId());
-            userDTO.setUsername(user.getUsername());
-            userDTO.setRegisteredDate(user.getRegisteredDate());
-
-            // Загружаем профиль пользователя
-            List<User> usersWithProfiles = userRepository.findByIdsWithProfiles(List.of(user.getUserId()));
-            if (!usersWithProfiles.isEmpty() && usersWithProfiles.get(0).getProfile() != null) {
-                UserProfile profile = usersWithProfiles.get(0).getProfile();
-                userDTO.setNickname(profile.getNickname());
-
-                // Загружаем изображение профиля
-                if (profile.getUserImglId() != null) {
-                    Integer imageLinkId = profile.getUserImglId().getImglId();
-                    List<ImageLink> imageLinks = imageLinkRepository.findByIdsWithImageData(List.of(imageLinkId));
-                    if (!imageLinks.isEmpty()) {
-                        ImageLink imageLink = imageLinks.get(0);
-                        if (imageLink.getImageData() != null) {
-                            ImageData imageData = imageLink.getImageData();
-                            ImageDataDTO imageDataDTO = new ImageDataDTO(
-                                    imageData.getImgdId(),
-                                    imageData.getUuid(),
-                                    imageData.getSize(),
-                                    imageData.getMimeType(),
-                                    imageData.getExtension()
-                            );
-                            ImageLinkDTO imageLinkDTO = new ImageLinkDTO(imageLink.getImglId(), imageDataDTO);
-                            userDTO.setProfileImage(imageLinkDTO);
-                        }
-                    }
-                }
-            }
-            dto.setUser(userDTO);
-        }
-
-        return dto;
-    }
 
     private Long getCollectionsCountForBook(Integer bookId) {
         try {
@@ -632,5 +740,53 @@ public class BookService {
         response.put("totalElements", totalReviews);
         response.put("reviews", reviews);
         return response;
+    }
+
+    private BookReviewDTO convertToBookReviewDTO(BookReview review) {
+        BookReviewDTO dto = new BookReviewDTO();
+        dto.setReviewId(review.getRvwId());
+        dto.setScore(review.getScore());
+        dto.setReviewText(review.getReviewText());
+        dto.setBookId(review.getBook().getBookId());
+
+        // Информация о пользователе
+        User user = review.getUser();
+        if (user != null) {
+            UserDTO userDTO = new UserDTO();
+            userDTO.setUserId(user.getUserId());
+            userDTO.setUsername(user.getUsername());
+            userDTO.setRegisteredDate(user.getRegisteredDate());
+
+            // Загружаем профиль пользователя
+            List<User> usersWithProfiles = userRepository.findByIdsWithProfiles(List.of(user.getUserId()));
+            if (!usersWithProfiles.isEmpty() && usersWithProfiles.get(0).getProfile() != null) {
+                UserProfile profile = usersWithProfiles.get(0).getProfile();
+                userDTO.setNickname(profile.getNickname());
+
+                // Загружаем изображение профиля
+                if (profile.getUserImglId() != null) {
+                    Integer imageLinkId = profile.getUserImglId().getImglId();
+                    List<ImageLink> imageLinks = imageLinkRepository.findByIdsWithImageData(List.of(imageLinkId));
+                    if (!imageLinks.isEmpty()) {
+                        ImageLink imageLink = imageLinks.get(0);
+                        if (imageLink.getImageData() != null) {
+                            ImageData imageData = imageLink.getImageData();
+                            ImageDataDTO imageDataDTO = new ImageDataDTO(
+                                    imageData.getImgdId(),
+                                    imageData.getUuid(),
+                                    imageData.getSize(),
+                                    imageData.getMimeType(),
+                                    imageData.getExtension()
+                            );
+                            ImageLinkDTO imageLinkDTO = new ImageLinkDTO(imageLink.getImglId(), imageDataDTO);
+                            userDTO.setProfileImage(imageLinkDTO);
+                        }
+                    }
+                }
+            }
+            dto.setUser(userDTO);
+        }
+
+        return dto;
     }
 }

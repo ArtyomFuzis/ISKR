@@ -1,3 +1,4 @@
+// /src/components/stars/Stars.tsx
 import Star from "../../assets/elements/star.svg";
 import SemiStar from "../../assets/elements/semi-star.svg";
 import NullStar from "../../assets/elements/null-star.svg";
@@ -7,7 +8,7 @@ interface StarsProps {
   count: number;
   onChange?: (count: number) => void;
   size?: 'small' | 'medium' | 'large';
-  showValue?: boolean; // Добавляем пропс для управления отображением значения
+  showValue?: boolean;
 }
 
 function Stars({ count, onChange, size = 'medium', showValue = true }: StarsProps) {
@@ -16,27 +17,75 @@ function Stars({ count, onChange, size = 'medium', showValue = true }: StarsProp
   
   const handleStarClick = (starValue: number) => {
     if (onChange) {
-      onChange(starValue);
+      // Если кликаем на уже заполненную звезду и она была полной,
+      // устанавливаем половинчатую оценку
+      if (starValue === Math.ceil(count) && count === starValue) {
+        onChange(starValue - 0.5);
+      } else {
+        onChange(starValue);
+      }
+    }
+  };
+
+  const handleHalfStarClick = (starValue: number, e: React.MouseEvent) => {
+    if (onChange) {
+      const starElement = e.currentTarget;
+      const rect = starElement.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const width = rect.width;
+      
+      // Если клик в правой половине звезды - полная звезда
+      // Если в левой половине - половина звезды
+      if (x > width / 2) {
+        onChange(starValue);
+      } else {
+        onChange(starValue - 0.5);
+      }
     }
   };
 
   const renderStar = (position: number) => {
     const isClickable = !!onChange;
     
-    // Определяем тип звезды для отображения
     let starElement;
     if (roundedCount >= position) {
-      starElement = <img src={Star} alt="star" />;
+      starElement = (
+        <div 
+          className="star-full"
+          onClick={isClickable ? (e) => handleHalfStarClick(position, e) : undefined}
+          style={{ cursor: isClickable ? 'pointer' : 'default' }}
+        >
+          <img src={Star} alt="star" />
+        </div>
+      );
     } else if (roundedCount >= position - 0.5) {
-      starElement = <img src={SemiStar} alt="half-star" />;
+      starElement = (
+        <div className="star-half-container">
+          <img src={NullStar} alt="empty-star" />
+          <div 
+            className="star-half"
+            onClick={isClickable ? (e) => handleHalfStarClick(position, e) : undefined}
+            style={{ cursor: isClickable ? 'pointer' : 'default' }}
+          >
+            <img src={SemiStar} alt="half-star" />
+          </div>
+        </div>
+      );
     } else {
-      starElement = <img src={NullStar} alt="empty-star" />;
+      starElement = (
+        <div 
+          className="star-empty"
+          onClick={isClickable ? (e) => handleHalfStarClick(position, e) : undefined}
+          style={{ cursor: isClickable ? 'pointer' : 'default' }}
+        >
+          <img src={NullStar} alt="empty-star" />
+        </div>
+      );
     }
 
     return (
       <div
-        className={`star ${size} ${isClickable ? 'clickable' : ''}`}
-        onClick={() => isClickable && handleStarClick(position)}
+        className={`star ${size}`}
         key={position}
       >
         {starElement}
@@ -48,7 +97,7 @@ function Stars({ count, onChange, size = 'medium', showValue = true }: StarsProp
     <div className="stars-container">
       {[1, 2, 3, 4, 5].map(renderStar)}
       {showValue && (
-        <span className="rating-value" style={{ marginLeft: '4px' }}>
+        <span className="rating-value">
           {count.toFixed(1)}
         </span>
       )}

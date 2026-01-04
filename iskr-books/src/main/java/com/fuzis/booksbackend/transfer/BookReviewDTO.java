@@ -16,4 +16,5 @@ public class BookReviewDTO {
     private UserDTO user;
     private Integer score;
     private String reviewText;
+    private Integer bookId;
 }

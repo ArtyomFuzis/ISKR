@@ -36,4 +36,9 @@ public interface BookReviewRepository extends JpaRepository<BookReview, Integer>
     // Подсчет количества отзывов для книги
     @Query("SELECT COUNT(br) FROM BookReview br WHERE br.book.bookId = :bookId")
     long countByBookId(@Param("bookId") Integer bookId);
+    // Новый метод для поиска отзыва по userId и bookId
+    Optional<BookReview> findByUser_UserIdAndBook_BookId(Integer userId, Integer bookId);
+
+    // Метод для проверки существования отзыва
+    boolean existsByUser_UserIdAndBook_BookId(Integer userId, Integer bookId);
 }

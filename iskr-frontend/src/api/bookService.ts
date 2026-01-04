@@ -3,6 +3,43 @@ import axios from 'axios';
 import { OAPI_BASE_URL } from '../constants/api';
 import type { ApiResponse } from '../types/popular';
 
+export interface ReviewResponse {
+  data: {
+    state: string;
+    message: string;
+    key: Review | null;
+  };
+  meta: {
+    timestamp: string;
+    processedBy: string;
+    userId: string;
+  };
+}
+
+// Обновляем интерфейс Review для соответствия ответу сервера
+export interface Review {
+  reviewId: number;
+  user: {
+    userId: number;
+    username: string;
+    registeredDate: string;
+    nickname: string;
+    profileImage: {
+      imglId: number;
+      imageData: {
+        imgdId: number;
+        uuid: string;
+        size: number;
+        mimeType: string;
+        extension: string;
+      };
+    } | null;
+  };
+  score: number; // В 10-балльной системе (5 звёзд = 10)
+  reviewText: string;
+  bookId: number;
+}
+
 export interface BookDetail {
   bookId: number;
   isbn: string;
@@ -174,21 +211,6 @@ export const bookAPI = {
     }
   },
 
-  deleteBook: async (bookId: number): Promise<void> => {
-    try {
-      const response = await axios.delete<ApiResponse<void>>(
-        `${OAPI_BASE_URL}/v1/book?bookId=${bookId}`
-      );
-
-      if (response.data.data.state !== 'OK') {
-        throw new Error(response.data.data.message || 'Не удалось удалить книгу');
-      }
-    } catch (error: any) {
-      console.error('Error deleting book:', error);
-      throw error;
-    }
-  },
-
   // Загрузка изображения для книги
   uploadBookImage: async (file: File): Promise<any> => {
     try {
@@ -223,6 +245,88 @@ export const bookAPI = {
       throw error;
     }
   },
+
+  createReview: async (bookId: number, score: number, reviewText: string): Promise<Review> => {
+    try {
+      const response = await axios.post<ReviewResponse>(
+        `${OAPI_BASE_URL}/v1/book/reviews?bookId=${bookId}`,
+        { reviewText, score },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (response.data.data.state === 'OK' && response.data.data.key) {
+        return response.data.data.key;
+      }
+
+      throw new Error(response.data.data.message || 'Не удалось создать отзыв');
+    } catch (error: any) {
+      console.error('Error creating review:', error);
+      throw error;
+    }
+  },
+
+  updateReview: async (bookId: number, score: number, reviewText: string): Promise<Review> => {
+    try {
+      const response = await axios.put<ReviewResponse>(
+        `${OAPI_BASE_URL}/v1/book/reviews?bookId=${bookId}`,
+        { reviewText, score },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (response.data.data.state === 'OK' && response.data.data.key) {
+        return response.data.data.key;
+      }
+
+      throw new Error(response.data.data.message || 'Не удалось обновить отзыв');
+    } catch (error: any) {
+      console.error('Error updating review:', error);
+      throw error;
+    }
+  },
+
+  deleteReview: async (bookId: number): Promise<void> => {
+    try {
+      const response = await axios.delete<ReviewResponse>(
+        `${OAPI_BASE_URL}/v1/book/reviews?bookId=${bookId}`
+      );
+
+      if (response.data.data.state !== 'OK') {
+        throw new Error(response.data.data.message || 'Не удалось удалить отзыв');
+      }
+    } catch (error: any) {
+      console.error('Error deleting review:', error);
+      throw error;
+    }
+  },
+
+  getMyReview: async (bookId: number): Promise<Review | null> => {
+    try {
+      const response = await axios.get<ReviewResponse>(
+        `${OAPI_BASE_URL}/v1/book/reviews/my?bookId=${bookId}`
+      );
+
+      if (response.data.data.state === 'OK' && response.data.data.key) {
+        return response.data.data.key;
+      }
+
+      return null;
+    } catch (error: any) {
+      // Если отзыв не найден (404), возвращаем null
+      if (error.response?.status === 404) {
+        return null;
+      }
+      console.error('Error fetching my review:', error);
+      throw error;
+    }
+  },
 };
 
-export default bookAPI;
+export default bookAPI; 

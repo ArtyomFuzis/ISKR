@@ -2,6 +2,7 @@ package com.fuzis.booksbackend.controller;
 
 import com.fuzis.booksbackend.service.BookService;
 import com.fuzis.booksbackend.transfer.BookCreateDTO;
+import com.fuzis.booksbackend.transfer.BookReviewRequestDTO;
 import com.fuzis.booksbackend.transfer.BookUpdateDTO;
 import com.fuzis.booksbackend.transfer.ChangeDTO;
 import com.fuzis.booksbackend.util.HttpUtil;
@@ -61,5 +62,34 @@ public class BookController {
             @RequestParam(defaultValue = "0") @Min(0) Integer page,
             @RequestParam(defaultValue = "10") @Min(1) Integer batch) {
         return httpUtil.handleServiceResponse(bookService.getAllBooks(page, batch));
+    }
+    @PostMapping("/{id}/reviews")
+    public ResponseEntity<ChangeDTO<Object>> createBookReview(
+            @RequestHeader Integer userId,
+            @PathVariable @Min(1) Integer id,
+            @Valid @RequestBody BookReviewRequestDTO bookReviewRequestDTO) {
+        return httpUtil.handleServiceResponse(bookService.createBookReview(userId, id, bookReviewRequestDTO));
+    }
+
+    @PutMapping("/{id}/reviews")
+    public ResponseEntity<ChangeDTO<Object>> updateBookReview(
+            @RequestHeader Integer userId,
+            @PathVariable @Min(1) Integer id,
+            @Valid @RequestBody BookReviewRequestDTO bookReviewRequestDTO) {
+        return httpUtil.handleServiceResponse(bookService.updateBookReview(userId, id, bookReviewRequestDTO));
+    }
+
+    @DeleteMapping("/{id}/reviews")
+    public ResponseEntity<ChangeDTO<Object>> deleteBookReview(
+            @RequestHeader Integer userId,
+            @PathVariable @Min(1) Integer id) {
+        return httpUtil.handleServiceResponse(bookService.deleteBookReview(userId, id));
+    }
+
+    @GetMapping("/{id}/reviews/my")
+    public ResponseEntity<ChangeDTO<Object>> getMyBookReview(
+            @RequestHeader Integer userId,
+            @PathVariable @Min(1) Integer id) {
+        return httpUtil.handleServiceResponse(bookService.getBookReviewByUserAndBook(userId, id));
     }
 }
