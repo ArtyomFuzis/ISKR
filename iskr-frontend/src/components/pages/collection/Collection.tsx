@@ -88,10 +88,10 @@ function Collection() {
         setError(null);
         setIsForbidden(false);
 
-        // Загружаем информацию о коллекции и книги параллельно
+        // Используем auth методы для авторизованных пользователей
         const [collectionData, booksData] = await Promise.all([
-          collectionAPI.getCollection(collectionId),
-          collectionAPI.getCollectionBooks(collectionId, 12, 0)
+          collectionAPI.getCollection(collectionId, isAuthenticated),
+          collectionAPI.getCollectionBooks(collectionId, 12, 0, isAuthenticated)
         ]);
 
         setCollectionInfo(collectionData);
@@ -144,7 +144,7 @@ function Collection() {
 
     try {
       const nextPage = currentPage + 1;
-      const booksData = await collectionAPI.getCollectionBooks(collectionId, 12, nextPage);
+      const booksData = await collectionAPI.getCollectionBooks(collectionId, 12, nextPage, isAuthenticated);
 
       const formattedBooks: BookCardData[] = booksData.books.map((book: CollectionBook) => ({
         id: book.bookId.toString(),
@@ -171,7 +171,7 @@ function Collection() {
     try {
       await collectionAPI.deleteCollection(collectionId);
       setShowDeleteDialog(false);
-      sessionStorage.setItem('deletedCollectionId', collectionId.toString());
+      // Перенаправляем на корень (/)
       navigate('/library');
     } catch (err: any) {
       console.error('Error deleting collection:', err);
@@ -204,7 +204,7 @@ function Collection() {
     // Перезагружаем список книг
     const loadBooks = async () => {
       try {
-        const booksData = await collectionAPI.getCollectionBooks(collectionId, 12, 0);
+        const booksData = await collectionAPI.getCollectionBooks(collectionId, 12, 0, isAuthenticated);
         const formattedBooks: BookCardData[] = booksData.books.map((book: CollectionBook) => ({
           id: book.bookId.toString(),
           title: book.title,

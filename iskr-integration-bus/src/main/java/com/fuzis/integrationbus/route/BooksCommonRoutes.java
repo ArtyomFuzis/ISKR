@@ -146,7 +146,7 @@ public class BooksCommonRoutes extends RouteBuilder {
                 .setHeader("X-Service-Request", simple("api/v1/collections/${header.collectionId}/books"))
                 .to("direct:sd-call-finalize");
 
-        from("platform-http:/oapi/v1/collection/auth?httpMethodRestrict=GET")
+        from("platform-http:/oapi/v1/collections/auth?httpMethodRestrict=GET")
                 .routeId("user-books-collection-auth-route")
                 .onException(ServiceFall.class)
                 .handled(true)
@@ -584,8 +584,8 @@ public class BooksCommonRoutes extends RouteBuilder {
                 .to("direct:auth")
                 .setHeader(Exchange.HTTP_METHOD, constant("DELETE"))
                 .setHeader("X-Service", constant("Books"))
-                .setHeader("userId", simple("${header.X-User-ID}"))
                 .setHeader("X-Service-Request", simple("api/v1/collections/${header.collectionId}/privileges/${header.userId}"))
+                .setHeader("userId", simple("${header.X-User-ID}"))
                 .to("direct:sd-call-finalize");
 
         from("platform-http:/oapi/v1/collection/like?httpMethodRestrict=POST")

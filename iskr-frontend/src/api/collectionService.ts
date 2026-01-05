@@ -90,11 +90,13 @@ export interface LikeStatus {
 
 export const collectionAPI = {
   // Получение информации о коллекции
-  getCollection: async (collectionId: number): Promise<CollectionInfo> => {
+  getCollection: async (collectionId: number, useAuth: boolean = false): Promise<CollectionInfo> => {
     try {
-      const response = await axios.get<ApiResponse<CollectionInfo>>(`${OAPI_BASE_URL}/v1/collections`, {
-        params: { collectionId }
-      });
+      const endpoint = useAuth ? '/v1/collections/auth' : '/v1/collections';
+      const response = await axios.get<ApiResponse<CollectionInfo>>(
+        `${OAPI_BASE_URL}${endpoint}`,
+        { params: { collectionId } }
+      );
       
       if (response.data.data.state === 'OK') {
         return response.data.data.key;
@@ -112,15 +114,17 @@ export const collectionAPI = {
     }
   },
 
-  // Получение книг коллекции
+  // Получение книг коллекции (с использованием auth метода для авторизованных)
   getCollectionBooks: async (
     collectionId: number, 
     batch: number = 10, 
-    page: number = 0
+    page: number = 0,
+    useAuth: boolean = false
   ): Promise<CollectionBooksResponse> => {
     try {
+      const endpoint = useAuth ? '/v1/collections/books/auth' : '/v1/collections/books';
       const response = await axios.get<ApiResponse<CollectionBooksResponse>>(
-        `${OAPI_BASE_URL}/v1/collections/books`,
+        `${OAPI_BASE_URL}${endpoint}`,
         {
           params: { collectionId, batch, page }
         }

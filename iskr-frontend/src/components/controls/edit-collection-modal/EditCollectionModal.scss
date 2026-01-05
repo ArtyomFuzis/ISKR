@@ -1,10 +1,11 @@
+// /src/components/controls/edit-collection-modal/EditCollectionModal.scss
 @use '../../../_index.scss' as *;
 
 .edit-collection-modal {
   background: #1a1a1a;
   border-radius: 12px;
   padding: 2rem;
-  max-width: 800px;
+  max-width: 1000px; // Увеличиваем с 800px до 1000px
   width: 100%;
   border: 2px solid $pink;
   max-height: 90vh;
@@ -273,6 +274,43 @@
   padding-top: 1.5rem;
   border-top: 1px solid rgba($pink, 0.2);
 
+  .left-actions,
+  .right-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .edit-access-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background: rgba(66, 135, 245, 0.1);
+    border: 1px solid rgba(66, 135, 245, 0.3);
+    border-radius: 8px;
+    color: #4287f5;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 1rem;
+    white-space: nowrap; // Добавляем чтобы текст не переносился
+
+    &:hover:not(:disabled) {
+      background: rgba(66, 135, 245, 0.2);
+      border-color: #4287f5;
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    img {
+      height: 18px;
+      width: 18px;
+    }
+  }
+
   .delete-collection-btn {
     padding: 0.75rem 1.5rem;
     background: rgba(255, 68, 68, 0.1);
@@ -282,6 +320,7 @@
     cursor: pointer;
     transition: all 0.2s ease;
     font-size: 1rem;
+    white-space: nowrap; // Добавляем чтобы текст не переносился
 
     &:hover:not(:disabled) {
       background: rgba(255, 68, 68, 0.2);
@@ -300,6 +339,7 @@
 
     button {
       min-width: 140px;
+      white-space: nowrap; // Добавляем чтобы текст не переносился
     }
   }
 }

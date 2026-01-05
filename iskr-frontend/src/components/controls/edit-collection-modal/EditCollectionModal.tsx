@@ -1,14 +1,19 @@
 // /src/components/controls/edit-collection-modal/EditCollectionModal.tsx
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Modal from '../modal/Modal';
 import PrimaryButton from '../primary-button/PrimaryButton';
 import SecondaryButton from '../secondary-button/SecondaryButton';
 import Input from '../input/Input';
 import './EditCollectionModal.scss';
 import CoverSelectModal from '../cover-select-modal/CoverSelectModal';
+import EditAccessModal from '../edit-access-modal/EditAccessModal';
+import { useSelector } from 'react-redux';
+import type { RootState } from '../../../redux/store';
 import collectionAPI, { type CollectionInfo, type CreateCollectionData } from '../../../api/collectionService';
 import { getImageUrl } from '../../../api/popularService';
 import PlaceholderImage from '../../../assets/images/placeholder.jpg';
+import LockIcon from '../../../assets/elements/lock.svg';
 
 interface EditCollectionModalProps {
   open: boolean;
@@ -17,9 +22,12 @@ interface EditCollectionModalProps {
   onCollectionUpdated?: (collection: CollectionInfo) => void;
 }
 
-type ActiveSubModal = 'cover' | 'confidentiality' | null;
+type ActiveSubModal = 'cover' | 'confidentiality' | 'access' | null;
 
 function EditCollectionModal({ open, onClose, collection, onCollectionUpdated }: EditCollectionModalProps) {
+  const navigate = useNavigate();
+  const currentUser = useSelector((state: RootState) => state.auth.user);
+  
   // Основные поля
   const [title, setTitle] = useState(collection.title);
   const [description, setDescription] = useState(collection.description);
@@ -124,7 +132,8 @@ function EditCollectionModal({ open, onClose, collection, onCollectionUpdated }:
       setLoading(true);
       await collectionAPI.deleteCollection(collection.collectionId);
       onClose();
-      // Можно добавить редирект или callback для удаления
+      // Перенаправляем на корень (/)
+      navigate('/library');
     } catch (err: any) {
       console.error('Error deleting collection:', err);
       setError(err.message || 'Ошибка удаления коллекции');
@@ -271,25 +280,40 @@ function EditCollectionModal({ open, onClose, collection, onCollectionUpdated }:
       )}
 
       <div className="modal-actions">
-        <button
-          type="button"
-          className="delete-collection-btn"
-          onClick={handleDeleteCollection}
-          disabled={loading}
-        >
-          Удалить коллекцию
-        </button>
-        <div className="action-buttons">
-          <SecondaryButton
-            label="Отмена"
-            onClick={onClose}
+        <div className="left-actions">
+          <button
+            type="button"
+            className="edit-access-btn"
+            onClick={() => setActiveSubModal('access')}
             disabled={loading}
-          />
-          <PrimaryButton
-            label={loading ? "Сохранение..." : "Сохранить изменения"}
-            onClick={handleUpdateCollection}
+            title="Редактировать доступ"
+          >
+            <img src={LockIcon} alt="Доступ" />
+            Редактировать доступ
+          </button>
+        </div>
+        
+        <div className="right-actions">
+          <button
+            type="button"
+            className="delete-collection-btn"
+            onClick={handleDeleteCollection}
             disabled={loading}
-          />
+          >
+            Удалить коллекцию
+          </button>
+          <div className="action-buttons">
+            <SecondaryButton
+              label="Отмена"
+              onClick={onClose}
+              disabled={loading}
+            />
+            <PrimaryButton
+              label={loading ? "Сохранение..." : "Сохранить изменения"}
+              onClick={handleUpdateCollection}
+              disabled={loading}
+            />
+          </div>
         </div>
       </div>
     </>
@@ -308,6 +332,15 @@ function EditCollectionModal({ open, onClose, collection, onCollectionUpdated }:
             onSelect={handleCoverSelect}
             onClose={handleSubModalClose}
             goBack={handleSubModalClose}
+          />
+        );
+      case 'access':
+        return (
+          <EditAccessModal
+            open={true}
+            onClose={handleSubModalClose}
+            collectionId={collection.collectionId}
+            collectionTitle={collection.title}
           />
         );
       default:

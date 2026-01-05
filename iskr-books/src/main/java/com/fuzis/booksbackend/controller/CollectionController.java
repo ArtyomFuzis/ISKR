@@ -22,14 +22,14 @@ public class CollectionController {
     @GetMapping("/{collectionId}")
     public ResponseEntity<ChangeDTO<Object>> getCollectionDetail(
             @PathVariable @Min(1) Integer collectionId,
-            @RequestParam(required = false) Integer userId) {
+            @RequestHeader(required = false) Integer userId) {
         return httpUtil.handleServiceResponse(collectionService.getCollectionDetail(collectionId, userId));
     }
 
     @GetMapping("/{collectionId}/books")
     public ResponseEntity<ChangeDTO<Object>> getCollectionBooks(
             @PathVariable @Min(1) Integer collectionId,
-            @RequestParam(required = false) Integer userId,
+            @RequestHeader(required = false) Integer userId,
             @RequestParam(defaultValue = "0") @Min(0) Integer page,
             @RequestParam(defaultValue = "10") @Min(1) Integer batch) {
         return httpUtil.handleServiceResponse(

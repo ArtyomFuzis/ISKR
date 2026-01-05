@@ -71,6 +71,8 @@
   align-items: flex-start;
   margin-bottom: 2rem;
   gap: 1rem;
+  // Добавляем отступ справа для крестика
+  padding-right: 50px;
 
   .collection-title-section {
     display: flex;
@@ -106,6 +108,9 @@
     display: flex;
     gap: 0.5rem;
     align-items: center;
+    // Добавляем z-index чтобы кнопки были под крестиком
+    z-index: 1;
+    position: relative;
 
     .collection-action-btn {
       display: flex;
@@ -133,6 +138,9 @@
         padding: 0.5rem 1rem;
         border: 1px solid rgba($pink, 0.3);
         background: rgba($pink, 0.1);
+        // Уменьшаем минимальную ширину
+        min-width: auto;
+        white-space: nowrap;
         
         &:hover {
           background: rgba($pink, 0.2);

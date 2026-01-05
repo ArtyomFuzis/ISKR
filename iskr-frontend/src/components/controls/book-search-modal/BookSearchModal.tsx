@@ -39,7 +39,7 @@ function BookSearchModal({ collectionId, onClose, onBooksAdded }: BookSearchModa
       try {
         setLoading(true);
         setError(null);
-        
+
         const response = await searchAPI.search({
           Query: debouncedSearchQuery,
           Types: 'book',
@@ -76,37 +76,21 @@ function BookSearchModal({ collectionId, onClose, onBooksAdded }: BookSearchModa
   const handleBookToggle = async (bookId: number) => {
     try {
       setProcessingBooks(prev => new Set(prev).add(bookId));
-      
+
       const isInCollection = bookInCollectionStatus[bookId];
 
       if (isInCollection) {
-        // Удаляем книгу из коллекции
         await collectionAPI.removeBookFromCollection(collectionId, bookId);
         setBookInCollectionStatus(prev => ({
           ...prev,
           [bookId]: false
         }));
-        
-        // Удаляем из выбранных
-        setSelectedBooks(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(bookId);
-          return newSet;
-        });
       } else {
-        // Добавляем книгу в коллекцию
         await collectionAPI.addBookToCollection(collectionId, bookId);
         setBookInCollectionStatus(prev => ({
           ...prev,
           [bookId]: true
         }));
-        
-        // Добавляем в выбранные
-        setSelectedBooks(prev => {
-          const newSet = new Set(prev);
-          newSet.add(bookId);
-          return newSet;
-        });
       }
     } catch (err: any) {
       console.error('Error toggling book in collection:', err);
@@ -118,13 +102,6 @@ function BookSearchModal({ collectionId, onClose, onBooksAdded }: BookSearchModa
         return newSet;
       });
     }
-  };
-
-  const handleAddSelectedBooks = () => {
-    if (onBooksAdded) {
-      onBooksAdded(Array.from(selectedBooks));
-    }
-    onClose();
   };
 
   const getBookImageUrl = (book: any): string => {
@@ -190,7 +167,7 @@ function BookSearchModal({ collectionId, onClose, onBooksAdded }: BookSearchModa
               {searchResults.map(book => {
                 const isInCollection = bookInCollectionStatus[book.bookId] || false;
                 const isProcessing = processingBooks.has(book.bookId);
-                
+
                 return (
                   <div
                     key={book.bookId}
@@ -199,13 +176,13 @@ function BookSearchModal({ collectionId, onClose, onBooksAdded }: BookSearchModa
                     <CardElement
                       title={book.title}
                       description={getAuthorsString(book)}
-                      starsCount={formatRating(book.averageRating)}
+                      // Если книга в коллекции, не передаем рейтинг
+                      starsCount={isInCollection ? undefined : formatRating(book.averageRating)}
                       imageUrl={getBookImageUrl(book)}
                       button={true}
                       buttonLabel={isInCollection ? "Убрать из коллекции" : "Добавить в коллекцию"}
                       onButtonClick={() => handleBookToggle(book.bookId)}
                       infoDecoration={isInCollection ? "В коллекции" : undefined}
-                      isInCollection={isInCollection}
                       starsSize="small"
                     />
                     {isProcessing && (
@@ -220,16 +197,11 @@ function BookSearchModal({ collectionId, onClose, onBooksAdded }: BookSearchModa
           )}
         </div>
 
-        <div className="modal-actions">
-          <SecondaryButton
-            label="Отмена"
-            onClick={onClose}
-          />
-          <PrimaryButton
-            label={`Добавить выбранные (${selectedBooks.size})`}
-            onClick={handleAddSelectedBooks}
-            disabled={selectedBooks.size === 0}
-          />
+          <div className="modal-actions">
+            <SecondaryButton
+              label="Готово"
+              onClick={onClose}
+            />
         </div>
       </div>
     </div>
