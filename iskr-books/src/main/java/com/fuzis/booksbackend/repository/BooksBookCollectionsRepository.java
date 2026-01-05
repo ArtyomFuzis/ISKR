@@ -35,4 +35,5 @@ public interface BooksBookCollectionsRepository extends JpaRepository<BooksBookC
     // Добавляем метод для подсчета количества коллекций для книги
     @Query("SELECT COUNT(bbc) FROM BooksBookCollections bbc WHERE bbc.book.bookId = :bookId")
     long countByBookId(@Param("bookId") Integer bookId);
+
 }

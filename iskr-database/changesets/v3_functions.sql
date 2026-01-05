@@ -56,8 +56,8 @@ CREATE FUNCTION BOOKS.GET_VISIBLE_COLLECTIONS_FOR_USER(
     owner_id INTEGER,
     title VARCHAR(512),
     description TEXT,
-    confidentiality BOOKS.CONFIDENTIALITY,
-    book_collection_type BOOKS.COLLECTION_TYPE
+    confidentiality VARCHAR(50),
+    book_collection_type VARCHAR(50)
 ) AS $$
 BEGIN
     RETURN QUERY

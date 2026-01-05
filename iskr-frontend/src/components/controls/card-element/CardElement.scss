@@ -1,3 +1,4 @@
+// /src/components/controls/card-element/CardElement.scss
 @use '../../../_index.scss' as *;
 
 .card-element {
@@ -9,6 +10,13 @@
   margin: 0;
   padding: 0;
   height: 100%;
+  position: relative;
+  transition: all 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
 
   .top-card-container {
     position: relative;
@@ -35,7 +43,7 @@
     position: absolute;
     top: -30px;
     right: 0;
-    width: 140px; // Увеличиваем ширину с 120px до 140px
+    width: 140px;
     height: 30px;
     background: linear-gradient(90deg, #181D35, #1A1A2E);
     border-top-left-radius: 4px;
@@ -44,13 +52,14 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.25rem; // Уменьшаем gap
-    padding: 0 8px; // Добавляем padding
+    gap: 0.25rem;
+    padding: 0 8px;
+    z-index: 1;
     
     .stars-container {
       display: flex;
       align-items: center;
-      gap: 2px; // Уменьшаем gap между звездами
+      gap: 2px;
       
       .star {
         &.small, &.medium, &.large {
@@ -63,8 +72,8 @@
       }
       
       .rating-value {
-        font-size: 0.75rem; // Уменьшаем размер шрифта
-        margin-left: 2px; // Уменьшаем отступ
+        font-size: 0.75rem;
+        margin-left: 2px;
         color: white;
         white-space: nowrap;
       }
@@ -74,6 +83,16 @@
       font-size: 0.8rem;
       color: white;
       white-space: nowrap;
+      font-weight: normal;
+      
+      &.in-collection {
+        color: $pink;
+        font-weight: bold;
+        
+        &::before {
+          content: '✓ ';
+        }
+      }
     }
   }
 
@@ -89,6 +108,7 @@
     .card-text-container {
       margin-bottom: 0.75rem;
       min-height: 2.5rem;
+      padding-top: 0.5rem; // Добавляем отступ сверху для компенсации card-info-decoration
     }
 
     .card-title {
@@ -118,8 +138,8 @@
       justify-content: center;
       align-items: center;
       flex-direction: row;
-      background: $reds-gradient;
-      border: none;
+      background: rgba(233, 69, 96, 0.1);
+      border: 1px solid rgba(233, 69, 96, 0.3);
       border-radius: 4px;
       font-weight: bolder;
       outline: none;
@@ -127,24 +147,89 @@
       cursor: pointer;
       padding: 0.5rem;
       width: 100%;
-      transition: box-shadow 0.3s ease, background 0.3s ease, outline 0.3s ease;
+      transition: box-shadow 0.3s ease, background 0.3s ease, border-color 0.3s ease;
       font-size: 0.85rem;
       white-space: nowrap;
+      color: $pink;
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      &:not(:disabled):hover {
+        background: rgba(233, 69, 96, 0.2);
+        border-color: $pink;
+        box-shadow: 0 0 8px rgba(233, 69, 96, 0.3);
+      }
 
       img {
         height: 16px;
         width: 16px;
         margin: 0 0.25rem 0 0;
       }
-
-      &:hover {
-        box-shadow: 0 0 10px 1px $pink;
-      }
     }
 
     .card-button--clicked {
-      background: transparent;
-      outline: $pink 1px solid;
+      background: rgba(233, 69, 96, 0.2);
+      border: 1px solid $pink;
+      color: lighten($pink, 10%);
+    }
+  }
+}
+
+// Адаптивные стили
+@media (max-width: 768px) {
+  .card-element {
+    .top-card-container {
+      height: 25vh;
+      min-height: 150px;
+    }
+    
+    .card-info-decoration {
+      width: 120px;
+      height: 26px;
+      top: -26px;
+      
+      .info-decoration-text {
+        font-size: 0.7rem;
+      }
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .card-element {
+    .top-card-container {
+      height: 20vh;
+      min-height: 120px;
+    }
+    
+    .card-info-decoration {
+      width: 100px;
+      height: 24px;
+      top: -24px;
+      
+      .info-decoration-text {
+        font-size: 0.65rem;
+      }
+    }
+    
+    .card-info {
+      padding: 0.5rem;
+      
+      .card-title {
+        font-size: 0.85rem;
+      }
+      
+      .card-description {
+        font-size: 0.75rem;
+      }
+      
+      .card-button {
+        font-size: 0.75rem;
+        padding: 0.4rem;
+      }
     }
   }
 }

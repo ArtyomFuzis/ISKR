@@ -1,0 +1,150 @@
+@use '../../../_index.scss' as *;
+
+.book-search-modal {
+  background: #1a1a1a;
+  border-radius: 12px;
+  padding: 2rem;
+  max-width: 1000px;
+  width: 100%;
+  border: 2px solid $pink;
+  max-height: 90vh;
+  overflow-y: auto;
+
+  .modal-header {
+    margin-bottom: 1.5rem;
+
+    .modal-title {
+      color: #FFFFFF;
+      font-size: 1.8rem;
+      text-align: center;
+      font-weight: bold;
+    }
+  }
+
+  .modal-content {
+    .search-input-container {
+      margin-bottom: 1.5rem;
+    }
+
+    .error-message {
+      background: rgba(255, 68, 68, 0.1);
+      border: 1px solid rgba(255, 68, 68, 0.3);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+
+      .error-icon {
+        color: #ff4444;
+        font-size: 1rem;
+        flex-shrink: 0;
+      }
+
+      span {
+        color: #ff8888;
+        font-size: 0.95rem;
+        line-height: 1.4;
+      }
+    }
+
+    .search-results-container {
+      .loading-state,
+      .no-results-message {
+        text-align: center;
+        padding: 2rem;
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 1.1rem;
+
+        .loading-spinner {
+          width: 40px;
+          height: 40px;
+          border: 3px solid rgba(233, 69, 96, 0.3);
+          border-top: 3px solid rgba(233, 69, 96, 1);
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+          margin: 0 auto 1rem;
+        }
+      }
+    }
+
+    .search-results-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1.5rem;
+      max-height: 50vh;
+      overflow-y: auto;
+      padding: 1rem;
+      margin: 0 -0.5rem;
+
+      .search-result-item {
+        position: relative;
+        transition: all 0.2s ease;
+
+        &.in-collection {
+          .card-element {
+            border-color: $pink;
+            box-shadow: 0 0 10px rgba(233, 69, 96, 0.3);
+          }
+        }
+
+        &.processing {
+          opacity: 0.5;
+          pointer-events: none;
+        }
+
+        .processing-overlay {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: rgba(0, 0, 0, 0.5);
+          border-radius: 8px;
+          z-index: 10;
+
+          .processing-spinner {
+            width: 30px;
+            height: 30px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top: 3px solid $pink;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+          }
+        }
+
+        .card-element {
+          height: 100%;
+          
+          .card-button {
+            font-size: 0.8rem;
+            padding: 0.4rem;
+          }
+        }
+      }
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 2rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid rgba($pink, 0.2);
+
+      .selected-count {
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 0.95rem;
+      }
+    }
+  }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

@@ -30,7 +30,7 @@ public class BookCreateDTO {
     private Integer addedBy;
 
     private Set<Integer> authorIds;
-    
+
     private Set<Integer> genreIds;
 
     @Size(max = 1024, message = "Subtitle must not exceed 1024 characters")

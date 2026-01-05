@@ -25,7 +25,7 @@ function Book() {
   const currentUser = useSelector((state: RootState) => state.auth.user);
   const location = useLocation();
   const navigate = useNavigate();
-  
+
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showDeleteReviewDialog, setShowDeleteReviewDialog] = useState(false);
   const [showReadingForm, setShowReadingForm] = useState(false);
@@ -33,7 +33,7 @@ function Book() {
   const [showEditMenu, setShowEditMenu] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [userRating, setUserRating] = useState(0);
-  
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [bookDetail, setBookDetail] = useState<BookDetail | null>(null);
@@ -140,7 +140,7 @@ function Book() {
   useEffect(() => {
     if (bookDetail) {
       const isMine = currentUser ? bookDetail.addedBy.userId === Number(currentUser.id) : false;
-      
+
       setFormData({
         title: bookDetail.title,
         author: bookDetail.authors.map(a => a.name).join(', '),
@@ -157,7 +157,7 @@ function Book() {
 
   const handleSaveReview = () => {
     if (!isAuthenticated) return;
-    
+
     if (userReview) {
       setShowReviewModal(true);
     } else {
@@ -211,18 +211,18 @@ function Book() {
       setReviewLoading(true);
       const scoreIn10 = score * 2;
       const newReview = await bookAPI.createReview(bookId, scoreIn10, reviewText);
-      
+
       setReviews(prev => [newReview, ...prev]);
       setUserReview(newReview);
       setUserRating(score);
-      
+
       if (bookDetail) {
         setBookDetail({
           ...bookDetail,
           reviewsCount: bookDetail.reviewsCount + 1
         });
       }
-      
+
       setShowReviewModal(false);
     } catch (error: any) {
       console.error('Error creating review:', error);
@@ -237,13 +237,13 @@ function Book() {
       setReviewLoading(true);
       const scoreIn10 = score * 2;
       const updatedReview = await bookAPI.updateReview(bookId, scoreIn10, reviewText);
-      
-      setReviews(prev => prev.map(review => 
+
+      setReviews(prev => prev.map(review =>
         review.reviewId === updatedReview.reviewId ? updatedReview : review
       ));
       setUserReview(updatedReview);
       setUserRating(score);
-      
+
       setShowReviewModal(false);
     } catch (error: any) {
       console.error('Error updating review:', error);
@@ -255,16 +255,16 @@ function Book() {
 
   const confirmDeleteReview = async () => {
     if (!userReview) return;
-    
+
     try {
       await bookAPI.deleteReview(bookId);
-      
-      setReviews(prev => prev.filter(review => 
+
+      setReviews(prev => prev.filter(review =>
         review.reviewId !== userReview.reviewId
       ));
       setUserReview(null);
       setUserRating(0);
-      
+
       if (bookDetail) {
         setBookDetail({
           ...bookDetail,
@@ -310,7 +310,7 @@ function Book() {
 
     const formatDate = (date: Date, daysAgo: number) => {
       const day = date.getDate();
-      const month = date.toLocaleString('ru-RU', {month: 'long'});
+      const month = date.toLocaleString('ru-RU', { month: 'long' });
       const year = date.getFullYear();
 
       let daysAgoStr = '';
@@ -345,8 +345,8 @@ function Book() {
   const renderErrorState = () => (
     <div className="error-state">
       <p>Ошибка: {error}</p>
-      <SecondaryButton 
-        label="Вернуться назад" 
+      <SecondaryButton
+        label="Вернуться назад"
         onClick={() => navigate(-1)}
       />
     </div>
@@ -384,7 +384,7 @@ function Book() {
           >
             ×
           </button>
-          
+
           <div className="book-header">
             <div className="book-title-section">
               <h2 className="book-title">{formData.title}</h2>
@@ -404,14 +404,14 @@ function Book() {
                 </span>
               </div>
             </div>
-            
+
             {formData.isMine && isAuthenticated && (
               <div className="book-actions">
                 <button onClick={handleEditBook} title="Редактировать">
-                  <img src={Change} alt="Редактировать"/>
+                  <img src={Change} alt="Редактировать" />
                 </button>
                 <button onClick={handleDelete} title="Удалить">
-                  <img src={Delete} alt="Удалить"/>
+                  <img src={Delete} alt="Удалить" />
                 </button>
               </div>
             )}
@@ -430,15 +430,15 @@ function Book() {
                     <div className="rating-title">
                       {userReview ? 'Ваша оценка:' : 'Поставьте оценку:'}
                     </div>
-                    <Stars 
-                      count={userRating} 
-                      onChange={userReview ? undefined : setUserRating} 
+                    <Stars
+                      count={userRating}
+                      onChange={userReview ? undefined : setUserRating}
                       size="large"
                       showValue={true}
                     />
                     {!userReview && (
-                      <PrimaryButton 
-                        label="Сохранить оценку" 
+                      <PrimaryButton
+                        label="Сохранить оценку"
                         onClick={handleSaveReview}
                         fullWidth={true}
                         disabled={userRating === 0}
@@ -505,12 +505,12 @@ function Book() {
 
                   <div className="detail-group full-width">
                     <label>Добавлено пользователем</label>
-                    <div 
-                      className="added-by clickable" 
+                    <div
+                      className="added-by clickable"
                       onClick={() => handleAuthorClick(bookDetail.addedBy.userId)}
                     >
-                      <img 
-                        src={getImageUrl(bookDetail.addedBy.profileImage) || PlaceholderImage} 
+                      <img
+                        src={getImageUrl(bookDetail.addedBy.profileImage) || PlaceholderImage}
                         alt={bookDetail.addedBy.nickname}
                         className="added-by-avatar"
                       />
@@ -521,8 +521,8 @@ function Book() {
 
                 {isAuthenticated && !formData.isMine && (
                   <div className="book-action-buttons">
-                    <PrimaryButton label="Отметить прочитанное" onClick={handleMarkAsRead} type="button"/>
-                    <SecondaryButton label="Добавить в коллекцию" onClick={handleAddToCollection} type="button"/>
+                    <PrimaryButton label="Отметить прочитанное" onClick={handleMarkAsRead} type="button" />
+                    <SecondaryButton label="Добавить в коллекцию" onClick={handleAddToCollection} type="button" />
                   </div>
                 )}
               </div>
@@ -536,7 +536,7 @@ function Book() {
                     <div className="progress-bar">
                       <div
                         className="progress-fill"
-                        style={{width: `${readingStats.percentage}%`}}
+                        style={{ width: `${readingStats.percentage}%` }}
                       ></div>
                     </div>
                     <div className="progress-text">
@@ -575,27 +575,27 @@ function Book() {
                   <div className="section-header">
                     <h3>Мой отзыв</h3>
                     <div className="review-actions">
-                      <button 
+                      <button
                         className="edit-review-btn"
                         onClick={() => setShowReviewModal(true)}
                         title="Редактировать отзыв"
                       >
                         ✎
                       </button>
-                      <button 
+                      <button
                         className="delete-review-btn"
                         onClick={() => setShowDeleteReviewDialog(true)}
                         title="Удалить отзыв"
                       >
-                        <img src={DeleteIcon} alt="Удалить отзыв"/>
+                        <img src={DeleteIcon} alt="Удалить отзыв" />
                       </button>
                     </div>
                   </div>
                   <div className="review-card my-review">
                     <div className="review-header">
                       <div className="review-user">
-                        <img 
-                          src={getImageUrl(userReview.user.profileImage) || PlaceholderImage} 
+                        <img
+                          src={getImageUrl(userReview.user.profileImage) || PlaceholderImage}
                           alt={userReview.user.nickname}
                           className="review-user-avatar"
                         />
@@ -622,33 +622,33 @@ function Book() {
                     {reviews
                       .filter(review => !userReview || review.reviewId !== userReview.reviewId)
                       .map((review) => (
-                      <div key={review.reviewId} className="review-card">
-                        <div className="review-header">
-                          <div 
-                            className="review-user clickable"
-                            onClick={() => handleReviewUserClick(review.user.userId)}
-                          >
-                            <img 
-                              src={getImageUrl(review.user.profileImage) || PlaceholderImage} 
-                              alt={review.user.nickname}
-                              className="review-user-avatar"
-                            />
-                            <div className="review-user-info">
-                              <span className="review-user-name">{review.user.nickname}</span>
-                              <span className="review-date">
-                                {new Date(review.user.registeredDate).toLocaleDateString('ru-RU')}
-                              </span>
+                        <div key={review.reviewId} className="review-card">
+                          <div className="review-header">
+                            <div
+                              className="review-user clickable"
+                              onClick={() => handleReviewUserClick(review.user.userId)}
+                            >
+                              <img
+                                src={getImageUrl(review.user.profileImage) || PlaceholderImage}
+                                alt={review.user.nickname}
+                                className="review-user-avatar"
+                              />
+                              <div className="review-user-info">
+                                <span className="review-user-name">{review.user.nickname}</span>
+                                <span className="review-date">
+                                  {new Date(review.user.registeredDate).toLocaleDateString('ru-RU')}
+                                </span>
+                              </div>
                             </div>
+                            <Stars count={formatRating(review.score)} size="small" showValue={true} />
                           </div>
-                          <Stars count={formatRating(review.score)} size="small" showValue={true} />
+                          <div className="review-content">
+                            <p className="review-text">{review.reviewText}</p>
+                          </div>
                         </div>
-                        <div className="review-content">
-                          <p className="review-text">{review.reviewText}</p>
-                        </div>
-                      </div>
-                    ))}
+                      ))}
                   </div>
-                  
+
                   {hasMoreReviews && (
                     <div className="load-more-container">
                       <PrimaryButton
@@ -699,10 +699,8 @@ function Book() {
 
       <Modal open={showCollectionForm} onClose={() => setShowCollectionForm(false)}>
         <CollectionListModal
-          onCollectionSelected={(collectionIds) => {
-            console.log('Книга добавлена в коллекции:', collectionIds);
-            setShowCollectionForm(false);
-          }}
+          bookId={bookId}
+          onClose={() => setShowCollectionForm(false)}
         />
       </Modal>
 

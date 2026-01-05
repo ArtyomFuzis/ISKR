@@ -32,6 +32,8 @@ import Avatar6 from '../../../assets/images/users/avatar6.jpg';
 import Avatar7 from '../../../assets/images/users/avatar7.jpg';
 import Avatar8 from '../../../assets/images/users/avatar8.jpg';
 import CreateBookModal from "../../controls/create-book-modal/CreateBookModal";
+import CreateCollectionModal from "../../controls/create-collection-modal/CreateCollectionModal";
+import collectionAPI from '../../../api/collectionService';
 
 // Локальные интерфейсы для компонента
 interface Book {
@@ -74,6 +76,8 @@ function Library() {
   const [loadingWishlist, setLoadingWishlist] = useState(true);
   const [loadingError, setLoadingError] = useState<string | null>(null);
 
+  const [isCreateCollectionOpen, setIsCreateCollectionOpen] = useState(false);
+
   // Функция для получения URL изображения книги
   const getBookImageUrl = (book: LibraryBook): string => {
     if (!book.photoLink?.imageData?.uuid || !book.photoLink?.imageData?.extension) {
@@ -96,6 +100,18 @@ function Library() {
     const url = `/images/${collection.photoLink.imageData.uuid}.${collection.photoLink.imageData.extension}`;
     console.log(`Collection image URL for ${collection.title}:`, url);
     return url;
+  };
+
+  const handleCollectionCreated = (collection: any) => {
+    // Обновляем список коллекций
+    loadLibraryData();
+
+    // Показываем уведомление или выделяем коллекцию
+    setHighlightedCollectionId(collection.collectionId.toString());
+
+    setTimeout(() => {
+      setHighlightedCollectionId(null);
+    }, 3000);
   };
 
   // Функция для преобразования LibraryBook в Book
@@ -244,7 +260,7 @@ function Library() {
   };
 
   const handleAddCollectionClick = () => {
-    setIsAddCollectionOpen(true);
+    setIsCreateCollectionOpen(true);
   };
 
   const handleCollectionFormSubmit = (collectionData: CollectionFormData) => {
@@ -460,8 +476,8 @@ function Library() {
                       starsCount={book.rating}
                       imageUrl={book.imageUrl}
                       button={true}
-                      buttonLabel={"Изменить"}
-                      buttonIconUrl={Change}
+                      buttonLabel={"Открыть"}
+                      buttonIconUrl={Open}
                       onClick={() => navigate('/book', {
                         state: {
                           id: book.id,
@@ -481,7 +497,7 @@ function Library() {
                           rating: book.rating,
                           coverUrl: book.imageUrl,
                           isMine: isAuthenticated,
-                          isEditMode: true
+                          isEditMode: false // Меняем с true на false
                         }
                       })}
                     />
@@ -860,12 +876,11 @@ function Library() {
       />
 
 
-      <Modal open={isAddCollectionOpen} onClose={() => setIsAddCollectionOpen(false)}>
-        <CollectionForm
-          onSubmit={handleCollectionFormSubmit}
-          onCancel={() => setIsAddCollectionOpen(false)}
-        />
-      </Modal>
+      <CreateCollectionModal
+        open={isCreateCollectionOpen}
+        onClose={() => setIsCreateCollectionOpen(false)}
+        onCollectionCreated={handleCollectionCreated}
+      />
 
       <Modal open={isConfirmClearWishlist} onClose={() => setIsConfirmClearWishlist(false)}>
         <ConfirmDialog

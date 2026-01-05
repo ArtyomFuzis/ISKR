@@ -65,6 +65,29 @@ export interface CollectionBooksResponse {
   totalElements: number;
 }
 
+export interface CreateCollectionData {
+  title: string;
+  description?: string;
+  confidentiality: 'Public' | 'Private';
+  collectionType?: string;
+  photoLink?: number | null;
+}
+
+export interface UserCollectionsResponse {
+  collections: CollectionInfo[];
+  batch: number;
+  totalPages: number;
+  page: number;
+  userId: number;
+  totalElements: number;
+}
+
+export interface LikeStatus {
+  isLiked: boolean;
+  collectionId: number;
+  userId: number;
+}
+
 export const collectionAPI = {
   // Получение информации о коллекции
   getCollection: async (collectionId: number): Promise<CollectionInfo> => {
@@ -81,7 +104,6 @@ export const collectionAPI = {
     } catch (error: any) {
       console.error('Error fetching collection:', error);
       
-      // Пробрасываем ошибку с информацией о статусе
       if (error.response) {
         error.message = error.response.data?.data?.message || error.message;
       }
@@ -112,11 +134,214 @@ export const collectionAPI = {
     } catch (error: any) {
       console.error('Error fetching collection books:', error);
       
-      // Пробрасываем ошибку с информацией о статусе
       if (error.response) {
         error.message = error.response.data?.data?.message || error.message;
       }
       
+      throw error;
+    }
+  },
+
+  // Получение всех коллекций пользователя
+  getUserCollections: async (): Promise<UserCollectionsResponse> => {
+    try {
+      const response = await axios.get<ApiResponse<UserCollectionsResponse>>(
+        `${OAPI_BASE_URL}/v1/collection`
+      );
+      
+      if (response.data.data.state === 'OK') {
+        return response.data.data.key;
+      }
+      
+      throw new Error(response.data.data.message || 'Не удалось загрузить коллекции пользователя');
+    } catch (error: any) {
+      console.error('Error fetching user collections:', error);
+      throw error;
+    }
+  },
+
+  // Создание коллекции
+  createCollection: async (data: CreateCollectionData): Promise<CollectionInfo> => {
+    try {
+      const response = await axios.post<ApiResponse<CollectionInfo>>(
+        `${OAPI_BASE_URL}/v1/collection`,
+        {
+          title: data.title,
+          description: data.description || '',
+          confidentiality: data.confidentiality,
+          collectionType: data.collectionType || 'Standard',
+          photoLink: data.photoLink || null
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (response.data.data.state === 'OK') {
+        return response.data.data.key;
+      }
+
+      throw new Error(response.data.data.message || 'Не удалось создать коллекцию');
+    } catch (error: any) {
+      console.error('Error creating collection:', error);
+      
+      if (error.response?.data?.data?.details) {
+        const errorDetails = error.response.data.data.details;
+        const errorMessage = errorDetails.message || 'Ошибка при создании коллекции';
+        const errorWithDetails = new Error(errorMessage);
+        (errorWithDetails as any).response = error.response;
+        throw errorWithDetails;
+      }
+
+      throw error;
+    }
+  },
+
+  // Обновление коллекции
+  updateCollection: async (collectionId: number, data: Partial<CreateCollectionData>): Promise<CollectionInfo> => {
+    try {
+      const response = await axios.put<ApiResponse<CollectionInfo>>(
+        `${OAPI_BASE_URL}/v1/collection?collectionId=${collectionId}`,
+        data,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (response.data.data.state === 'OK') {
+        return response.data.data.key;
+      }
+
+      throw new Error(response.data.data.message || 'Не удалось обновить коллекцию');
+    } catch (error: any) {
+      console.error('Error updating collection:', error);
+      throw error;
+    }
+  },
+
+  // Удаление коллекции
+  deleteCollection: async (collectionId: number): Promise<void> => {
+    try {
+      const response = await axios.delete<ApiResponse<void>>(
+        `${OAPI_BASE_URL}/v1/collection?collectionId=${collectionId}`
+      );
+
+      if (response.data.data.state !== 'OK') {
+        throw new Error(response.data.data.message || 'Не удалось удалить коллекцию');
+      }
+    } catch (error: any) {
+      console.error('Error deleting collection:', error);
+      throw error;
+    }
+  },
+
+  // Добавление книги в коллекцию
+  addBookToCollection: async (collectionId: number, bookId: number): Promise<void> => {
+    try {
+      const response = await axios.post<ApiResponse<void>>(
+        `${OAPI_BASE_URL}/v1/collection/book?collectionId=${collectionId}`,
+        { bookId },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (response.data.data.state !== 'OK') {
+        throw new Error(response.data.data.message || 'Не удалось добавить книгу в коллекцию');
+      }
+    } catch (error: any) {
+      console.error('Error adding book to collection:', error);
+      throw error;
+    }
+  },
+
+  // Удаление книги из коллекции
+  removeBookFromCollection: async (collectionId: number, bookId: number): Promise<void> => {
+    try {
+      const response = await axios.delete<ApiResponse<void>>(
+        `${OAPI_BASE_URL}/v1/collection/book?collectionId=${collectionId}&bookId=${bookId}`
+      );
+
+      if (response.data.data.state !== 'OK') {
+        throw new Error(response.data.data.message || 'Не удалось удалить книгу из коллекции');
+      }
+    } catch (error: any) {
+      console.error('Error removing book from collection:', error);
+      throw error;
+    }
+  },
+
+  // Получение статуса лайка
+  getLikeStatus: async (collectionId: number): Promise<LikeStatus> => {
+    try {
+      const response = await axios.get<ApiResponse<LikeStatus>>(
+        `${OAPI_BASE_URL}/v1/collection/like?collectionId=${collectionId}`
+      );
+
+      if (response.data.data.state === 'OK') {
+        return response.data.data.key;
+      }
+
+      throw new Error(response.data.data.message || 'Не удалось получить статус лайка');
+    } catch (error: any) {
+      console.error('Error fetching like status:', error);
+      throw error;
+    }
+  },
+
+  // Поставить лайк коллекции
+  likeCollection: async (collectionId: number): Promise<void> => {
+    try {
+      const response = await axios.post<ApiResponse<void>>(
+        `${OAPI_BASE_URL}/v1/collection/like?collectionId=${collectionId}`
+      );
+
+      if (response.data.data.state !== 'OK') {
+        throw new Error(response.data.data.message || 'Не удалось поставить лайк');
+      }
+    } catch (error: any) {
+      console.error('Error liking collection:', error);
+      throw error;
+    }
+  },
+
+  // Убрать лайк коллекции
+  unlikeCollection: async (collectionId: number): Promise<void> => {
+    try {
+      const response = await axios.delete<ApiResponse<void>>(
+        `${OAPI_BASE_URL}/v1/collection/like?collectionId=${collectionId}`
+      );
+
+      if (response.data.data.state !== 'OK') {
+        throw new Error(response.data.data.message || 'Не удалось убрать лайк');
+      }
+    } catch (error: any) {
+      console.error('Error unliking collection:', error);
+      throw error;
+    }
+  },
+  checkBookInCollection: async (collectionId: number, bookId: number): Promise<BookInCollectionStatus> => {
+    try {
+      const response = await axios.get<ApiResponse<BookInCollectionStatus>>(
+        `${OAPI_BASE_URL}/v1/collection/book`,
+        {
+          params: { collectionId, bookId }
+        }
+      );
+
+      if (response.data.data.state === 'OK') {
+        return response.data.data.key;
+      }
+
+      throw new Error(response.data.data.message || 'Не удалось проверить наличие книги в коллекции');
+    } catch (error: any) {
+      console.error('Error checking book in collection:', error);
       throw error;
     }
   },
