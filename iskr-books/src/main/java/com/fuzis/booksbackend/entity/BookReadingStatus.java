@@ -1,41 +1,37 @@
 package com.fuzis.booksbackend.entity;
 
-import com.fuzis.booksbackend.entity.enumerate.ReadingStatus;
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "book_reading_status", schema = "books")
-@Getter
-@Setter
+@Table(name = "BOOK_READING_STATUS", schema = "BOOKS")
+@Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class BookReadingStatus {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "brs_id")
     private Integer brsId;
 
-    @Column(name = "user_id")
+    @Column(name = "user_id", nullable = false)
     private Integer userId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "book_id")
+    @ManyToOne
+    @JoinColumn(name = "book_id", nullable = false)
     private Book book;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "reading_status")
-    private ReadingStatus readingStatus;
+    @Column(name = "reading_status", nullable = false, length = 50)
+    private String readingStatus;
 
-    @Column(name = "page_read")
-    private Integer pageRead = 0;
+    @Column(name = "page_read", nullable = false)
+    private Integer pageRead;
 
     @Column(name = "last_read_date")
     private LocalDateTime lastReadDate;
