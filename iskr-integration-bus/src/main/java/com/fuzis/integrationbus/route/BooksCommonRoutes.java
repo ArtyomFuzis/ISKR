@@ -838,7 +838,7 @@ public class BooksCommonRoutes extends RouteBuilder {
                 .setHeader("X-Service-Request", simple("api/v1/reading/status/${header.bookId}"))
                 .to("direct:sd-call-finalize");
 
-        from("platform-http:/oapi/v1/reading/status/add-progress?httpMethodRestrict=POST")
+        from("platform-http:/oapi/v1/reading/status/я?httpMethodRestrict=POST")
                 .routeId("user-books-reading-status-add-progress-route")
                 .onException(ServiceFall.class)
                 .handled(true)

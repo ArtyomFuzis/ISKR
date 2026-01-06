@@ -15,13 +15,13 @@ import type { RootState } from "../../../redux/store.ts";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { fetchAllPopular } from '../../../redux/popularSlice';
-import { 
-  setQuery, 
-  setTypes, 
+import {
+  setQuery,
+  setTypes,
   setGenre,
   setGenreName,
-  resetSearch, 
-  increaseLimit, 
+  resetSearch,
+  increaseLimit,
   clearSearch,
   performSearch,
   fetchGenres
@@ -40,23 +40,23 @@ function Home() {
   const [localSearchQuery, setLocalSearchQuery] = useState('');
   const [selectedTypes, setSelectedTypes] = useState<string[]>(['books', 'users', 'collections']);
   const [selectedGenre, setSelectedGenre] = useState('Все жанры');
-  
+
   const [bookWishlistStatus, setBookWishlistStatus] = useState<Record<number, boolean>>({});
   const [collectionLikeStatus, setCollectionLikeStatus] = useState<Record<number, boolean>>({});
   const [userFollowStates, setUserFollowStates] = useState<Record<number, boolean>>({});
-  
+
   const [wishlistLoading, setWishlistLoading] = useState<Record<number, boolean>>({});
   const [collectionLikeLoading, setCollectionLikeLoading] = useState<Record<number, boolean>>({});
   const [followLoading, setFollowLoading] = useState<Record<number, boolean>>({});
-  
+
   const [showLoadMore, setShowLoadMore] = useState(false);
-  
+
   const isAuthenticated = useSelector((state: RootState) => state.auth.isAuthenticated);
   const currentUser = useSelector((state: RootState) => state.auth.user);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [messageModalContent, setMessageModalContent] = useState({ title: '', message: '' });
-  
+
   const popular = useSelector((state: RootState) => state.popular);
   const search = useSelector((state: RootState) => state.search);
   const dispatch = useDispatch();
@@ -198,7 +198,7 @@ function Home() {
       }
     } catch (error: any) {
       console.error('Error toggling wishlist:', error);
-      
+
       if (error.response?.data?.data?.state === 'Fail_Conflict') {
         showErrorMessage('Ошибка', 'Эта книга уже находится в вашем вишлисте.');
       } else if (error.response?.data?.data?.state === 'Fail_NotFound') {
@@ -242,7 +242,7 @@ function Home() {
       }
     } catch (error: any) {
       console.error('Error toggling collection like:', error);
-      
+
       if (error.response?.data?.data?.state === 'Fail_Conflict') {
         showErrorMessage('Ошибка', 'Эта коллекция уже находится в вашем избранном.');
       } else if (error.response?.data?.data?.state === 'Fail_NotFound') {
@@ -290,7 +290,7 @@ function Home() {
       }
     } catch (error: any) {
       console.error('Error toggling follow:', error);
-      
+
       if (error.response?.data?.data?.state === 'Fail_Conflict') {
         showErrorMessage('Ошибка', 'Вы уже подписаны на этого пользователя.');
       } else if (error.response?.data?.data?.state === 'Fail_NotFound') {
@@ -307,18 +307,18 @@ function Home() {
     const newSelectedTypes = selectedTypes.includes(type)
       ? selectedTypes.filter(t => t !== type)
       : [...selectedTypes, type];
-    
+
     setSelectedTypes(newSelectedTypes);
-    
+
     const apiTypes = newSelectedTypes.map(t => {
       if (t === 'books') return 'book';
       if (t === 'users') return 'user';
       if (t === 'collections') return 'collection';
       return t;
     });
-    
+
     dispatch(setTypes(apiTypes));
-    
+
     if (search.query.trim()) {
       dispatch(resetSearch());
       dispatch(performSearch({ reset: true }));
@@ -327,7 +327,7 @@ function Home() {
 
   const handleGenreChange = (genreName: string) => {
     setSelectedGenre(genreName);
-    
+
     if (genreName === 'Все жанры') {
       dispatch(setGenre(null));
       dispatch(setGenreName('Все жанры'));
@@ -338,7 +338,7 @@ function Home() {
         dispatch(setGenreName(genre.name));
       }
     }
-    
+
     if (search.query.trim()) {
       dispatch(resetSearch());
       dispatch(performSearch({ reset: true }));
@@ -351,7 +351,7 @@ function Home() {
     dispatch(setTypes(['book', 'user', 'collection']));
     dispatch(setGenre(null));
     dispatch(setGenreName('Все жанры'));
-    
+
     if (search.query.trim()) {
       dispatch(resetSearch());
       dispatch(performSearch({ reset: true }));
@@ -390,18 +390,18 @@ function Home() {
 
   const searchBooks = search.results.books.map((book: Book) => {
     let description = '';
-    
+
     if (book.authors && book.authors.length > 0) {
       description = book.authors.join(', ');
-    } 
+    }
     else if (book.description) {
-      description = book.description.length > 80 
-        ? book.description.substring(0, 80) + '...' 
+      description = book.description.length > 80
+        ? book.description.substring(0, 80) + '...'
         : book.description;
-    } 
+    }
     else if (book.subtitle) {
       description = book.subtitle;
-    } 
+    }
     else if (book.collectionsCount > 0) {
       description = `В ${book.collectionsCount} ${russianLocalWordConverter(
         book.collectionsCount,
@@ -410,7 +410,7 @@ function Home() {
         'коллекциях',
         'коллекциях'
       )}`;
-    } 
+    }
     else {
       description = 'Нет описания';
     }
@@ -445,10 +445,10 @@ function Home() {
 
   const searchCollections = search.results.collections.map((collection: Collection) => {
     let description = '';
-    
+
     if (collection.description) {
-      description = collection.description.length > 80 
-        ? collection.description.substring(0, 80) + '...' 
+      description = collection.description.length > 80
+        ? collection.description.substring(0, 80) + '...'
         : collection.description;
     } else {
       description = `${collection.bookCount} ${russianLocalWordConverter(
@@ -627,13 +627,13 @@ function Home() {
     </div>
   );
 
-  const hasSearchResults = search.results.books.length > 0 || 
-                          search.results.users.length > 0 || 
-                          search.results.collections.length > 0;
+  const hasSearchResults = search.results.books.length > 0 ||
+    search.results.users.length > 0 ||
+    search.results.collections.length > 0;
 
-  const totalSearchResults = search.results.books.length + 
-                            search.results.users.length + 
-                            search.results.collections.length;
+  const totalSearchResults = search.results.books.length +
+    search.results.users.length +
+    search.results.collections.length;
 
   const genreOptions = ['Все жанры', ...search.genres.map(genre => genre.name)];
 
@@ -641,11 +641,11 @@ function Home() {
     <main>
       <div className="search-container">
         <h2>Поиск</h2>
-        <Input 
-          placeholder="Название книги, автор, коллекция, пользователь..." 
-          picture={searchIcon} 
+        <Input
+          placeholder="Название книги, автор, коллекция, пользователь..."
+          picture={searchIcon}
           value={localSearchQuery}
-          onChange={handleSearchChange} 
+          onChange={handleSearchChange}
         />
 
         {localSearchQuery && (
@@ -661,177 +661,176 @@ function Home() {
             />
 
             {selectedTypes.length > 0 && (
-              <div className="search-results container">
-                <div className="search-results-content">
-                  {search.loading && (
-                    <div className="search-loading">
-                      <div className="search-spinner"></div>
-                      <p>Поиск...</p>
-                    </div>
-                  )}
+              <div className="search-results-content">
+                {search.loading && (
+                  <div className="search-loading">
+                    <div className="search-spinner"></div>
+                    <p>Поиск...</p>
+                  </div>
+                )}
 
-                  {!search.loading && search.error ? (
-                    renderErrorState(search.error)
-                  ) : !search.loading && hasSearchResults ? (
-                    <>
-                      <div className="results-count">
-                        Найдено результатов: {search.total}
+                {!search.loading && search.error ? (
+                  renderErrorState(search.error)
+                ) : !search.loading && hasSearchResults ? (
+                  <>
+                    <div className="results-count">
+                      Найдено результатов: {search.total}
+                    </div>
+
+                    {selectedTypes.includes('books') && search.results.books.length > 0 && (
+                      <>
+                        {searchBooks.map((book) => {
+                          const isInWishlist = bookWishlistStatus[book.id] || false;
+                          const isLoading = wishlistLoading[book.id] || false;
+
+                          return (
+                            <div key={book.id} className="search-result-row">
+                              <div className="search-result-info" onClick={() => handleSearchBookClick(book)} style={{ cursor: 'pointer' }}>
+                                <img src={book.cover} alt="Book cover" />
+                                <div>
+                                  <p className="search-result-title">{book.title}</p>
+                                  <p className="search-result-author">{book.description}</p>
+                                  {book.rating > 0 && (
+                                    <div className="search-result-rating">
+                                      <Stars count={book.rating} size="small" />
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="search-result-actions">
+                                <button
+                                  className={isInWishlist ? 'active' : ''}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleBookWishlistToggle(book.id, book.title);
+                                  }}
+                                  disabled={isLoading}
+                                >
+                                  {isLoading ? (
+                                    <span>Загрузка...</span>
+                                  ) : (
+                                    <>
+                                      <img src={isInWishlist ? Delete : AddIcon} alt="" />
+                                      <span>{isInWishlist ? 'Удалить из вишлиста' : 'Добавить в вишлист'}</span>
+                                    </>
+                                  )}
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </>
+                    )}
+
+                    {selectedTypes.includes('users') && search.results.users.length > 0 && (
+                      <>
+                        {searchUsers.map((user) => {
+                          const isFollowed = userFollowStates[user.id] || false;
+                          const isLoading = followLoading[user.id] || false;
+                          const followerCount = isFollowed
+                            ? parseInt(user.followers.replace(/\s/g, '')) + 1
+                            : parseInt(user.followers.replace(/\s/g, ''));
+                          const formattedCount = followerCount.toLocaleString('ru-RU').replace(/,/g, ' ');
+
+                          return (
+                            <div key={user.id} className="search-result-row">
+                              <div className="search-result-info" onClick={() => handleSearchUserClick(user)} style={{ cursor: 'pointer' }}>
+                                <img src={user.avatar} alt="User avatar" />
+                                <div>
+                                  <p className="search-result-title">{user.displayName}</p>
+                                  <p className="search-result-author">{formattedCount} подписчиков</p>
+                                </div>
+                              </div>
+                              <div className="search-result-actions">
+                                <button
+                                  className={isFollowed ? 'active' : ''}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleUserFollowToggle(user.id, user.displayName);
+                                  }}
+                                  disabled={isLoading}
+                                >
+                                  {isLoading ? (
+                                    <span>Загрузка...</span>
+                                  ) : (
+                                    <>
+                                      <img src={isFollowed ? Delete : AddIcon} alt="" />
+                                      <span>{isFollowed ? 'Отписаться' : 'Подписаться'}</span>
+                                    </>
+                                  )}
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </>
+                    )}
+
+                    {selectedTypes.includes('collections') && search.results.collections.length > 0 && (
+                      <>
+                        {searchCollections.map((collection) => {
+                          const isLiked = collectionLikeStatus[collection.id] || false;
+                          const isLoading = collectionLikeLoading[collection.id] || false;
+                          const isOwnCollection = currentUser?.id && collection.ownerId === Number(currentUser.id);
+
+                          return (
+                            <div key={collection.id} className="search-result-row">
+                              <div className="search-result-info" onClick={() => handleSearchCollectionClick(collection)} style={{ cursor: 'pointer' }}>
+                                <img src={collection.cover} alt="Collection cover" />
+                                <div>
+                                  <p className="search-result-title">{collection.title}</p>
+                                  <p className="search-result-author">{collection.description}</p>
+                                </div>
+                              </div>
+                              <div className="search-result-actions">
+                                <span className="books-count">{collection.booksCount}</span>
+                                <button
+                                  className={isLiked ? 'active' : ''}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (isOwnCollection) {
+                                      showErrorMessage(
+                                        'Невозможно выполнить действие',
+                                        'Вы не можете добавлять в избранное свои собственные коллекции.'
+                                      );
+                                    } else {
+                                      handleCollectionLikeToggle(collection.id, collection.title, collection.ownerId);
+                                    }
+                                  }}
+                                  disabled={isLoading || isOwnCollection}
+                                >
+                                  {isLoading ? (
+                                    <span>Загрузка...</span>
+                                  ) : (
+                                    <>
+                                      <img src={isLiked ? Delete : AddIcon} alt="" />
+                                      <span>{isLiked ? 'Удалить из избранного' : 'Добавить в избранное'}</span>
+                                    </>
+                                  )}
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </>
+                    )}
+
+                    {showLoadMore && (
+                      <div className="load-more-container">
+                        <PrimaryButton
+                          label="Загрузить еще"
+                          onClick={handleLoadMore}
+                          disabled={search.loading}
+                        />
                       </div>
+                    )}
+                  </>
+                ) : localSearchQuery.trim() && !search.loading ? (
+                  <div className="no-results-message">
+                    По вашему запросу ничего не найдено
+                  </div>
+                ) : null}
 
-                      {selectedTypes.includes('books') && search.results.books.length > 0 && (
-                        <>
-                          {searchBooks.map((book) => {
-                            const isInWishlist = bookWishlistStatus[book.id] || false;
-                            const isLoading = wishlistLoading[book.id] || false;
-                            
-                            return (
-                              <div key={book.id} className="search-result-row">
-                                <div className="search-result-info" onClick={() => handleSearchBookClick(book)} style={{ cursor: 'pointer' }}>
-                                  <img src={book.cover} alt="Book cover"/>
-                                  <div>
-                                    <p className="search-result-title">{book.title}</p>
-                                    <p className="search-result-author">{book.description}</p>
-                                    {book.rating > 0 && (
-                                      <div className="search-result-rating">
-                                        <Stars count={book.rating} size="small"/>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                                <div className="search-result-actions">
-                                  <button
-                                    className={isInWishlist ? 'active' : ''}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleBookWishlistToggle(book.id, book.title);
-                                    }}
-                                    disabled={isLoading}
-                                  >
-                                    {isLoading ? (
-                                      <span>Загрузка...</span>
-                                    ) : (
-                                      <>
-                                        <img src={isInWishlist ? Delete : AddIcon} alt=""/>
-                                        <span>{isInWishlist ? 'Удалить из вишлиста' : 'Добавить в вишлист'}</span>
-                                      </>
-                                    )}
-                                  </button>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </>
-                      )}
-
-                      {selectedTypes.includes('users') && search.results.users.length > 0 && (
-                        <>
-                          {searchUsers.map((user) => {
-                            const isFollowed = userFollowStates[user.id] || false;
-                            const isLoading = followLoading[user.id] || false;
-                            const followerCount = isFollowed 
-                              ? parseInt(user.followers.replace(/\s/g, '')) + 1 
-                              : parseInt(user.followers.replace(/\s/g, ''));
-                            const formattedCount = followerCount.toLocaleString('ru-RU').replace(/,/g, ' ');
-                            
-                            return (
-                              <div key={user.id} className="search-result-row">
-                                <div className="search-result-info" onClick={() => handleSearchUserClick(user)} style={{ cursor: 'pointer' }}>
-                                  <img src={user.avatar} alt="User avatar"/>
-                                  <div>
-                                    <p className="search-result-title">{user.displayName}</p>
-                                    <p className="search-result-author">{formattedCount} подписчиков</p>
-                                  </div>
-                                </div>
-                                <div className="search-result-actions">
-                                  <button
-                                    className={isFollowed ? 'active' : ''}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleUserFollowToggle(user.id, user.displayName);
-                                    }}
-                                    disabled={isLoading}
-                                  >
-                                    {isLoading ? (
-                                      <span>Загрузка...</span>
-                                    ) : (
-                                      <>
-                                        <img src={isFollowed ? Delete : AddIcon} alt=""/>
-                                        <span>{isFollowed ? 'Отписаться' : 'Подписаться'}</span>
-                                      </>
-                                    )}
-                                  </button>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </>
-                      )}
-
-                      {selectedTypes.includes('collections') && search.results.collections.length > 0 && (
-                        <>
-                          {searchCollections.map((collection) => {
-                            const isLiked = collectionLikeStatus[collection.id] || false;
-                            const isLoading = collectionLikeLoading[collection.id] || false;
-                            const isOwnCollection = currentUser?.id && collection.ownerId === Number(currentUser.id);
-                            
-                            return (
-                              <div key={collection.id} className="search-result-row">
-                                <div className="search-result-info" onClick={() => handleSearchCollectionClick(collection)} style={{ cursor: 'pointer' }}>
-                                  <img src={collection.cover} alt="Collection cover"/>
-                                  <div>
-                                    <p className="search-result-title">{collection.title}</p>
-                                    <p className="search-result-author">{collection.description}</p>
-                                  </div>
-                                </div>
-                                <div className="search-result-actions">
-                                  <span className="books-count">{collection.booksCount}</span>
-                                  <button
-                                    className={isLiked ? 'active' : ''}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      if (isOwnCollection) {
-                                        showErrorMessage(
-                                          'Невозможно выполнить действие',
-                                          'Вы не можете добавлять в избранное свои собственные коллекции.'
-                                        );
-                                      } else {
-                                        handleCollectionLikeToggle(collection.id, collection.title, collection.ownerId);
-                                      }
-                                    }}
-                                    disabled={isLoading || isOwnCollection}
-                                  >
-                                    {isLoading ? (
-                                      <span>Загрузка...</span>
-                                    ) : (
-                                      <>
-                                        <img src={isLiked ? Delete : AddIcon} alt=""/>
-                                        <span>{isLiked ? 'Удалить из избранного' : 'Добавить в избранное'}</span>
-                                      </>
-                                    )}
-                                  </button>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </>
-                      )}
-
-                      {showLoadMore && (
-                        <div className="load-more-container">
-                          <PrimaryButton
-                            label="Загрузить еще"
-                            onClick={handleLoadMore}
-                            disabled={search.loading}
-                          />
-                        </div>
-                      )}
-                    </>
-                  ) : localSearchQuery.trim() && !search.loading ? (
-                    <div className="no-results-message">
-                      По вашему запросу ничего не найдено
-                    </div>
-                  ) : null}
-                </div>
               </div>
             )}
           </>
@@ -848,7 +847,7 @@ function Home() {
           <HorizontalSlider>
             {topBooks.map((book) => {
               const isInWishlist = bookWishlistStatus[book.id] || false;
-              
+
               return (
                 <CardElement
                   key={book.id}
@@ -888,7 +887,7 @@ function Home() {
             {topCollections.map((collection) => {
               const isLiked = collectionLikeStatus[collection.id] || false;
               const isOwnCollection = currentUser?.id && collection.ownerId === Number(currentUser.id);
-              
+
               return (
                 <CardElement
                   key={collection.id}
@@ -926,8 +925,8 @@ function Home() {
           <HorizontalSlider>
             {topUsers.map((user) => {
               const isFollowed = userFollowStates[user.id] || false;
-              const followerCount = isFollowed 
-                ? parseInt(user.followers.replace(/\s/g, '')) + 1 
+              const followerCount = isFollowed
+                ? parseInt(user.followers.replace(/\s/g, '')) + 1
                 : parseInt(user.followers.replace(/\s/g, ''));
               const formattedCount = followerCount.toLocaleString('ru-RU').replace(/,/g, ' ');
               const description = `${formattedCount} ${russianLocalWordConverter(
@@ -938,7 +937,7 @@ function Home() {
                 'подписчиков'
               )}`;
               const isOwnProfile = currentUser?.id && user.id === Number(currentUser.id);
-              
+
               return (
                 <CardElement
                   key={user.id}

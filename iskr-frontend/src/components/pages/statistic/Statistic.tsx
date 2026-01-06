@@ -1,573 +1,323 @@
-import '../home/Home.scss';
+import React, { useState, useEffect } from 'react';
 import './Statistic.scss';
-import PrimaryButton from "../../controls/primary-button/PrimaryButton.tsx";
-import CardElement from "../../controls/card-element/CardElement.tsx";
-import AddIcon from '../../../assets/elements/add.svg';
-import TriTovarischaCover from "../../../assets/images/books/tri-tovarischa.jpg";
-import VoinaIMirCover from '../../../assets/images/books/voina-i-mir.jpg';
-import MasterIMargheritaCover from '../../../assets/images/books/master-i-margarita.jpg';
-import PrestuplenieINakazanieCover from '../../../assets/images/books/prestuplenie-i-nakazanie.jpg';
-import AnnaKareninaCover from '../../../assets/images/books/anna-karenina.jpeg';
-import PortetDorianaGreyaCover from '../../../assets/images/books/portret-doriana-greya.jpg';
-import VelikiyGetsbiCover from '../../../assets/images/books/velikiy-getsbi.jpg';
-import MalenkiyPrintsCover from '../../../assets/images/books/malenkiy-prints.jpg';
-import IdiotCover from '../../../assets/images/books/idiot.jpg';
-import NadPropastyuVoRzhiCover from '../../../assets/images/books/nad-propastyu-vo-rzhi.jpg';
-import Gauge from "../../gauge/Gauge.tsx";
-import VerticalAccordion from "../../controls/vertical-accordion/VerticalAccordion.tsx";
-import Calendar from "../../../assets/elements/calendar.svg";
-import EmptyCalendar from "../../../assets/elements/empty-calendar.svg";
-import type {RootState} from "../../../redux/store.ts";
-import {useSelector} from "react-redux";
-import {useState} from "react";
-import GoalForm from "../../controls/goal-form/GoalForm.tsx";
-import Modal from "../../controls/modal/Modal.tsx";
-import BookListModal from "../../controls/book-list-modal/BookListModal.tsx";
-import OrwellCover from "../../../assets/images/books/1984.jpg";
-import GrafMonteCristoCover from "../../../assets/images/books/graf-monte-kristo.jpg";
-import {useNavigate} from "react-router-dom";
-import ReadingForm from "../../controls/reading-form/ReadingForm.tsx";
-
-interface Book {
-  id: string;
-  title: string;
-  author: string;
-  rating: number;
-  cover: string;
-}
+import PrimaryButton from "../../controls/primary-button/PrimaryButton";
+import Modal from "../../controls/modal/Modal";
+import GoalForm from "../../controls/goal-form/GoalForm";
+import GoalCard from "../../controls/goal-card/GoalCard";
+import ConfirmDialog from "../../controls/confirm-dialog/ConfirmDialog";
+import type { Goal, GoalStats, ReadingStats } from '../../../api/goalService';
+import goalService from '../../../api/goalService';
 
 function Statistic() {
-  const { user, isAuthenticated } = useSelector((state: RootState) => state.auth);
-  const isNewUser = user?.username === 'newuser';
+  // Состояния для целей
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
-  const { dailyGoal, dailyRead, yearlyGoal, yearlyRead } = useSelector(
-    (state: RootState) => state.goals
+  // Состояния для статистики
+  const [goalStats, setGoalStats] = useState<GoalStats | null>(null);
+  const [readingStats, setReadingStats] = useState<ReadingStats | null>(null);
+  
+  // Состояния для модальных окон
+  const [isGoalFormOpen, setIsGoalFormOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
+  const [goalToDelete, setGoalToDelete] = useState<number | null>(null);
+
+  // Загрузка данных
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const [goalsData, goalStatsData, readingStatsData] = await Promise.all([
+        goalService.getGoals(),
+        goalService.getGoalStats(),
+        goalService.getReadingStats()
+      ]);
+      
+      setGoals(goalsData);
+      setGoalStats(goalStatsData);
+      setReadingStats(readingStatsData);
+    } catch (err: any) {
+      console.error('Error loading statistics:', err);
+      setError(err.message || 'Ошибка загрузки данных');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  // Классификация целей
+  const now = new Date();
+  const currentGoals = goals.filter(goal => {
+    const endDate = new Date(goal.endDate);
+    return !goal.isCompleted && endDate >= now;
+  });
+
+  const completedGoals = goals.filter(goal => goal.isCompleted);
+
+  const failedGoals = goals.filter(goal => {
+    const endDate = new Date(goal.endDate);
+    return !goal.isCompleted && endDate < now;
+  });
+
+  // Обработчики целей
+  const handleCreateGoal = () => {
+    setEditingGoal(null);
+    setIsGoalFormOpen(true);
+  };
+
+  const handleEditGoal = (goal: Goal) => {
+    setEditingGoal(goal);
+    setIsGoalFormOpen(true);
+  };
+
+  const handleDeleteGoal = (goalId: number) => {
+    setGoalToDelete(goalId);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteGoal = async () => {
+    if (!goalToDelete) return;
+
+    try {
+      await goalService.deleteGoal(goalToDelete);
+      await loadData(); // Перезагружаем данные
+      setIsDeleteDialogOpen(false);
+      setGoalToDelete(null);
+    } catch (err: any) {
+      console.error('Error deleting goal:', err);
+      setError(err.message || 'Ошибка удаления цели');
+    }
+  };
+
+  const handleGoalSubmit = async (data: any) => {
+    try {
+      if (editingGoal) {
+        await goalService.updateGoal(editingGoal.pgoalId, data);
+      } else {
+        await goalService.createGoal(data);
+      }
+      
+      setIsGoalFormOpen(false);
+      setEditingGoal(null);
+      await loadData(); // Перезагружаем данные
+    } catch (err: any) {
+      console.error('Error saving goal:', err);
+      throw err;
+    }
+  };
+
+  // Рендер состояния загрузки
+  const renderLoadingState = () => (
+    <div className="loading-state">
+      <div className="loading-spinner"></div>
+      <p>Загрузка статистики...</p>
+    </div>
   );
-  
-  const hasDailyGoal = dailyGoal > 0;
-  const hasYearlyGoal = yearlyGoal > 0;
 
-  const [isChangeDailyGoalOpen, setIsChangeDailyGoalOpen] = useState(false);
-  const [isChangeYearlyGoalOpen, setIsChangeYearlyGoalOpen] = useState(false);
-  const [isAddReadingOpen, setIsAddReadingOpen] = useState(false);
-  const [isReadingFormOpen, setIsReadingFormOpen] = useState(false);
-  const [selectedBookForReading, setSelectedBookForReading] = useState<string>('');
+  // Рендер состояния ошибки
+  const renderErrorState = () => (
+    <div className="error-state">
+      <p>Ошибка: {error}</p>
+      <PrimaryButton
+        label="Попробовать снова"
+        onClick={loadData}
+      />
+    </div>
+  );
 
-  const isBookInList = (books: Book[], title: string, author: string): boolean => {
-    return books.some((book: Book) => book.title === title && book.author === author);
-  };
-
-  const isToday = (date: Date): boolean => {
-    const today = new Date();
-    return date.toDateString() === today.toDateString();
-  };
-
-  const isThisMonth = (date: Date): boolean => {
-    const now = new Date();
-    return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
-  };
-
-  const isThisYear = (date: Date): boolean => {
-    const now = new Date();
-    return date.getFullYear() === now.getFullYear();
-  };
-
-  const handleBooksSelected = (books: { id: string; title: string; author: string; rating: number; imageUrl: string }[]) => {
-    if (books.length > 0) {
-      const book = books[0];
-      setSelectedBookForReading(book.title);
-      setIsAddReadingOpen(false);
-      setIsReadingFormOpen(true);
-      sessionStorage.setItem('selectedBookForReading', JSON.stringify(book));
-    }
-  };
-
-  const handleReadingSubmit = (readingData: {
-    bookId: string;
-    title: string;
-    author: string;
-    rating: number;
-    imageUrl: string;
-    startDate: string;
-    endDate: string;
-    pages: number;
-    isFinished: boolean;
-  }) => {
-    const endDate = new Date(readingData.endDate);
-    const book = {
-      id: readingData.bookId || `temp-${Date.now()}`,
-      title: readingData.title,
-      author: readingData.author,
-      rating: readingData.rating || 5,
-      cover: readingData.imageUrl || TriTovarischaCover
-    };
-
-    if (isToday(endDate)) {
-      setReadingBooks((prev: Book[]) => {
-        if (!isBookInList(prev, book.title, book.author)) {
-          const updated = [...prev, book];
-          sessionStorage.setItem('readingBooks', JSON.stringify(updated));
-          return updated;
-        }
-        return prev;
-      });
-    }
-
-    if (isThisMonth(endDate)) {
-      setReadingBooks((prev: Book[]) => {
-        if (!isBookInList(prev, book.title, book.author)) {
-          const updated = [...prev, book];
-          sessionStorage.setItem('readingBooks', JSON.stringify(updated));
-          return updated;
-        }
-        return prev;
-      });
-    }
-
-    if (readingData.isFinished && isThisYear(endDate)) {
-      setYearlyBooks((prev: Book[]) => {
-        if (!isBookInList(prev, book.title, book.author)) {
-          const updated = [...prev, book];
-          sessionStorage.setItem('yearlyBooks', JSON.stringify(updated));
-          return updated;
-        }
-        return prev;
-      });
-    }
-
-    setIsReadingFormOpen(false);
-    sessionStorage.removeItem('selectedBookForReading');
-  };
-
-  const handleAddReading = (): void => {
-    setIsAddReadingOpen(true);
+  if (loading) {
+    return (
+      <main>
+        <div className="statistic-page-container container">
+          {renderLoadingState()}
+        </div>
+      </main>
+    );
   }
 
-  const handleChangeDailyGoal = (): void => {
-    setIsChangeDailyGoalOpen(true);
+  if (error) {
+    return (
+      <main>
+        <div className="statistic-page-container container">
+          {renderErrorState()}
+        </div>
+      </main>
+    );
   }
-
-  const handleChangeYearlyGoal = (): void => {
-    setIsChangeYearlyGoalOpen(true);
-  }
-
-  const navigate = useNavigate();
-
-  const getStoredReadingBooks = (): Book[] => {
-    if (isNewUser) return [];
-    const stored = sessionStorage.getItem('readingBooks');
-    if (stored) {
-      try {
-        return JSON.parse(stored);
-      } catch {
-        return [];
-      }
-    }
-    const defaultBooks: Book[] = [
-      { id: '1', title: "Три товарища", author: "Эрих Мария Ремарк", rating: 4.5, cover: TriTovarischaCover },
-      { id: '2', title: "Граф Монте-Кристо", author: "Александр Дюма", rating: 4.5, cover: GrafMonteCristoCover },
-      { id: '3', title: "1984", author: "Джордж Оруэлл", rating: 4.5, cover: OrwellCover },
-    ];
-    sessionStorage.setItem('readingBooks', JSON.stringify(defaultBooks));
-    return defaultBooks;
-  };
-
-  const getStoredYearlyBooks = (): Book[] => {
-    if (isNewUser) return [];
-    const stored = sessionStorage.getItem('yearlyBooks');
-    if (stored) {
-      try {
-        return JSON.parse(stored);
-      } catch {
-        return [];
-      }
-    }
-    const defaultBooks: Book[] = [
-      { id: '4', title: "Идиот", author: "Фёдор Достоевский", rating: 4.7, cover: IdiotCover },
-      { id: '5', title: "Над пропастью во ржи", author: "Джером Дэвид Сэлинджер", rating: 4.3, cover: NadPropastyuVoRzhiCover },
-      { id: '1', title: "Три товарища", author: "Эрих Мария Ремарк", rating: 4.5, cover: TriTovarischaCover },
-      { id: '6', title: "Мастер и Маргарита", author: "Михаил Булгаков", rating: 4.8, cover: MasterIMargheritaCover },
-      { id: '3', title: "1984", author: "Джордж Оруэлл", rating: 4.6, cover: OrwellCover },
-      { id: '7', title: "Преступление и наказание", author: "Фёдор Достоевский", rating: 4.7, cover: PrestuplenieINakazanieCover },
-      { id: '8', title: "Война и мир", author: "Лев Толстой", rating: 4.9, cover: VoinaIMirCover },
-      { id: '2', title: "Граф Монте-Кристо", author: "Александр Дюма", rating: 4.8, cover: GrafMonteCristoCover },
-      { id: '9', title: "Анна Каренина", author: "Лев Толстой", rating: 4.6, cover: AnnaKareninaCover },
-      { id: '10', title: "Портрет Дориана Грея", author: "Оскар Уайльд", rating: 4.5, cover: PortetDorianaGreyaCover },
-      { id: '11', title: "Великий Гэтсби", author: "Фрэнсис Скотт Фицджеральд", rating: 4.4, cover: VelikiyGetsbiCover },
-      { id: '12', title: "Маленький принц", author: "Антуан де Сент-Экзюпери", rating: 4.9, cover: MalenkiyPrintsCover },
-    ];
-    sessionStorage.setItem('yearlyBooks', JSON.stringify(defaultBooks));
-    return defaultBooks;
-  };
-
-  const [readingBooks, setReadingBooks] = useState<Book[]>(getStoredReadingBooks());
-  const [yearlyBooks, setYearlyBooks] = useState<Book[]>(getStoredYearlyBooks());
-
-  const handleBookClick = (book: Book) => {
-    navigate('/book', {
-      state: {
-        id: book.id,
-        title: book.title,
-        author: book.author,
-        rating: book.rating,
-        coverUrl: book.cover,
-        isMine: isAuthenticated,
-        isEditMode: false
-      }
-    });
-  };
-
-  const handleAddReadingForBook = (book: Book) => {
-    setSelectedBookForReading(book.title);
-    const bookData = {
-      id: book.id,
-      title: book.title,
-      author: book.author,
-      rating: book.rating,
-      imageUrl: book.cover
-    };
-    sessionStorage.setItem('selectedBookForReading', JSON.stringify(bookData));
-    setIsReadingFormOpen(true);
-  };
 
   return (
-    <>
-      <main>
-        <div className="top-container">
-          <div className="container-title-with-button">
-            <h2>Дневная статистика</h2>
-            <PrimaryButton label={"Внести прочитанное"} onClick={handleAddReading}/>
+    <main>
+      <div className="statistic-page-container">
+        {/* Блок целей */}
+        <div className="goals-section">
+          <div className="section-header">
+            <h2>Цели чтения</h2>
+            <PrimaryButton
+              label="Создать цель"
+              onClick={handleCreateGoal}
+            />
           </div>
-          {readingBooks.length > 2 ? (
-            <VerticalAccordion
-              header={
-                <div className="statistics-container">
-                  <div className="statistics-summary">
-                    <span>Сегодня прочитано {dailyRead} страниц</span>
-                    {dailyRead > 0 && <span>Книги, которые вы читали сегодня:</span>}
-                  </div>
 
-                  <div className="statistics-details">
-                    <div className="reading-books-container">
-                      {readingBooks.slice(0, 2).map((book: Book) => (
-                        <CardElement
-                          key={book.id}
-                          title={book.title}
-                          description={book.author}
-                          starsCount={book.rating}
-                          imageUrl={book.cover}
-                          button={true}
-                          buttonLabel={"Внести прочитанное"}
-                          buttonIconUrl={AddIcon}
-                          buttonChanged={false}
-                          onClick={() => handleBookClick(book)}
-                          onButtonClick={() => handleAddReadingForBook(book)}
-                        />
-                      ))}
-                    </div>
-                    <div className="statistics-graphs-container">
-                      {hasDailyGoal ? (
-                        <>
-                          <Gauge value={Math.round((dailyRead / dailyGoal) * 100)} bgColor={"none"}/>
-                          <span>{dailyRead} страниц из {dailyGoal}</span>
-                          <PrimaryButton label={"Изменить дневную цель"} onClick={handleChangeDailyGoal}/>
-                        </>
-                      ) : (
-                        <>
-                          <Gauge value={0} bgColor={"none"}/>
-                          <span>Цель не задана</span>
-                          <PrimaryButton label={"Добавить дневную цель"} onClick={handleChangeDailyGoal}/>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              }
-              content={
-                <div className="reading-books-container">
-                  {readingBooks.slice(2).map((book: Book) => (
-                    <CardElement
-                      key={book.id}
-                      title={book.title}
-                      description={book.author}
-                      starsCount={book.rating}
-                      imageUrl={book.cover}
-                      button={true}
-                      buttonLabel={"Внести прочитанное"}
-                      buttonIconUrl={AddIcon}
-                      buttonChanged={false}
-                      onClick={() => handleBookClick(book)}
-                      onButtonClick={() => handleAddReadingForBook(book)}
+          <div className="goals-container">
+            {/* Текущие цели */}
+            <div className="goals-column">
+              <h3 className="goals-column-title">Текущие цели</h3>
+              <div className="goals-list">
+                {currentGoals.length > 0 ? (
+                  currentGoals.map(goal => (
+                    <GoalCard
+                      key={goal.pgoalId}
+                      goal={goal}
+                      onEdit={handleEditGoal}
+                      onDelete={handleDeleteGoal}
                     />
-                  ))}
-                </div>
-              }>
-            </VerticalAccordion>
-          ) : (
-            <div className="statistics-container container">
-              <div className="statistics-summary">
-                <span>Сегодня прочитано {dailyRead} страниц</span>
-                {dailyRead > 0 && <span>Книги, которые вы читали сегодня:</span>}
-              </div>
-
-              <div className="statistics-details">
-                {readingBooks.length > 0 ? (
-                  <div className="reading-books-container">
-                    {readingBooks.map((book: Book) => (
-                      <CardElement
-                        key={book.id}
-                        title={book.title}
-                        description={book.author}
-                        starsCount={book.rating}
-                        imageUrl={book.cover}
-                        button={true}
-                        buttonLabel={"Внести прочитанное"}
-                        buttonIconUrl={AddIcon}
-                        buttonChanged={false}
-                        onClick={() => handleBookClick(book)}
-                        onButtonClick={() => handleAddReadingForBook(book)}
-                      />
-                    ))}
-                  </div>
+                  ))
                 ) : (
-                  <p className="no-books-message">Вы еще не читали книги сегодня.</p>
+                  <p className="no-goals-message">Нет текущих целей</p>
                 )}
-                <div className="statistics-graphs-container">
-                  {hasDailyGoal ? (
-                    <>
-                      <Gauge value={Math.round((dailyRead / dailyGoal) * 100)} bgColor={"none"}/>
-                      <span>{dailyRead} страниц из {dailyGoal}</span>
-                      <PrimaryButton label={"Изменить дневную цель"} onClick={handleChangeDailyGoal}/>
-                    </>
-                  ) : (
-                    <>
-                      <Gauge value={0} bgColor={"none"}/>
-                      <span>Цель не задана</span>
-                      <PrimaryButton label={"Добавить дневную цель"} onClick={handleChangeDailyGoal}/>
-                    </>
-                  )}
-                </div>
               </div>
             </div>
-          )}
+
+            {/* Успешные цели */}
+            <div className="goals-column">
+              <h3 className="goals-column-title">Успешные цели</h3>
+              <div className="goals-list">
+                {completedGoals.length > 0 ? (
+                  completedGoals.map(goal => (
+                    <GoalCard
+                      key={goal.pgoalId}
+                      goal={goal}
+                      onEdit={() => {}} // Не редактируем выполненные цели
+                      onDelete={handleDeleteGoal}
+                    />
+                  ))
+                ) : (
+                  <p className="no-goals-message">Нет выполненных целей</p>
+                )}
+              </div>
+            </div>
+
+            {/* Проваленные цели */}
+            <div className="goals-column">
+              <h3 className="goals-column-title">Проваленные цели</h3>
+              <div className="goals-list">
+                {failedGoals.length > 0 ? (
+                  failedGoals.map(goal => (
+                    <GoalCard
+                      key={goal.pgoalId}
+                      goal={goal}
+                      onEdit={() => {}} // Не редактируем проваленные цели
+                      onDelete={handleDeleteGoal}
+                    />
+                  ))
+                ) : (
+                  <p className="no-goals-message">Нет проваленных целей</p>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
-        <h2>Месячная статистика</h2>
-        {readingBooks.length > 2 ? (
-          <VerticalAccordion
-            header={
-              <div className="statistics-container">
-                <div className="statistics-summary">
-                  <span>В этом месяце вы прочитали {readingBooks.length} {readingBooks.length === 1 ? 'книгу' : readingBooks.length < 5 ? 'книги' : 'книг'}:</span>
-                </div>
 
-                <div className="statistics-details">
-                  <div className="reading-books-container">
-                    {readingBooks.slice(0, 2).map((book: Book) => (
-                      <CardElement
-                        key={book.id}
-                        title={book.title}
-                        description={book.author}
-                        starsCount={book.rating}
-                        imageUrl={book.cover}
-                        button={true}
-                        buttonLabel={"Внести прочитанное"}
-                        buttonIconUrl={AddIcon}
-                        buttonChanged={false}
-                        onClick={() => handleBookClick(book)}
-                        onButtonClick={() => handleAddReadingForBook(book)}
-                      />
-                    ))}
+        {/* Блок статистики */}
+        <div className="statistics-section">
+          <h2>Статистика чтения</h2>
+          
+          <div className="stats-container">
+            {/* Статистика по целям */}
+            <div className="stats-card goal-stats">
+              <h3>Статистика по целям</h3>
+              {goalStats && (
+                <div className="stats-grid">
+                  <div className="stat-item">
+                    <span className="stat-label">Всего целей</span>
+                    <span className="stat-value">{goalStats.totalGoals}</span>
                   </div>
-                  <div className="statistics-graphs-container">
-                    <img className="calendar" src={Calendar} alt={"Календарь"} />
+                  <div className="stat-item">
+                    <span className="stat-label">Выполнено</span>
+                    <span className="stat-value stat-success">{goalStats.completedGoals}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">В процессе</span>
+                    <span className="stat-value stat-in-progress">{goalStats.inProgressGoals}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">Провалено</span>
+                    <span className="stat-value stat-failed">{goalStats.failedGoals}</span>
                   </div>
                 </div>
-              </div>
-            }
-            content={
-              <div className="reading-books-container">
-                {readingBooks.slice(2).map((book: Book) => (
-                    <CardElement
-                      key={book.id}
-                      title={book.title}
-                      description={book.author}
-                      starsCount={book.rating}
-                      imageUrl={book.cover}
-                      button={true}
-                      buttonLabel={"Внести прочитанное"}
-                      buttonIconUrl={AddIcon}
-                      buttonChanged={false}
-                      onClick={() => handleBookClick(book)}
-                      onButtonClick={() => handleAddReadingForBook(book)}
-                    />
-                  ))}
-              </div>
-            }>
-          </VerticalAccordion>
-        ) : (
-          <div className="statistics-container container no-month">
-            <div className="statistics-summary">
-              <span>В этом месяце вы прочитали {readingBooks.length} {readingBooks.length === 1 ? 'книгу' : readingBooks.length > 1 && readingBooks.length < 5 ? 'книги' : 'книг'}:</span>
+              )}
             </div>
 
-            <div className="statistics-details">
-              {readingBooks.length > 0 ? (
-                <div className="reading-books-container">
-                  {readingBooks.map((book: Book) => (
-                      <CardElement
-                        key={book.id}
-                        title={book.title}
-                        description={book.author}
-                        starsCount={book.rating}
-                        imageUrl={book.cover}
-                        button={true}
-                        buttonLabel={"Внести прочитанное"}
-                        buttonIconUrl={AddIcon}
-                        buttonChanged={false}
-                        onClick={() => handleBookClick(book)}
-                        onButtonClick={() => handleAddReadingForBook(book)}
-                      />
-                    ))}
+            {/* Общая статистика чтения */}
+            <div className="stats-card reading-stats">
+              <h3>Общая статистика</h3>
+              {readingStats && (
+                <div className="stats-grid">
+                  <div className="stat-item">
+                    <span className="stat-label">Всего книг прочитано</span>
+                    <span className="stat-value">{readingStats.totalBooksRead}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">Всего страниц прочитано</span>
+                    <span className="stat-value">{readingStats.totalPagesRead}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">Читаю сейчас</span>
+                    <span className="stat-value">{readingStats.currentlyReadingBooks}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">Планирую прочитать</span>
+                    <span className="stat-value">{readingStats.planningToReadBooks}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">Отложено</span>
+                    <span className="stat-value">{readingStats.delayedBooks}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">Брошено</span>
+                    <span className="stat-value">{readingStats.gaveUpBooks}</span>
+                  </div>
                 </div>
-              ) : (
-                <p className="no-books-message">Вы еще не прочитали книг в этом месяце.</p>
               )}
-              <div className="statistics-graphs-container">
-                <img className="calendar" src={readingBooks.length > 0 ? Calendar : EmptyCalendar} alt={"Календарь"} />
-              </div>
             </div>
           </div>
-        )}
+        </div>
+      </div>
 
-        <h2>Годовая статистика</h2>
-        <VerticalAccordion
-          header={
-            <div className="statistics-container">
-              <div className="statistics-summary">
-                <span>В этом году вы прочитали {yearlyBooks.length} {yearlyBooks.length === 1 ? 'книгу' : yearlyBooks.length > 1 && yearlyBooks.length < 5 ? 'книги' : 'книг'}:</span>
-              </div>
-
-              <div className="statistics-details">
-                {yearlyBooks.length > 0 ? (
-                  <div className="reading-books-container">
-                    {yearlyBooks.slice(0, 2).map((book: Book) => (
-                      <CardElement 
-                        key={book.id}
-                        title={book.title} 
-                        description={book.author} 
-                        starsCount={book.rating} 
-                        imageUrl={book.cover}
-                        button={true}
-                        buttonLabel={"Внести прочитанное"}
-                        buttonIconUrl={AddIcon}
-                        buttonChanged={false}
-                        onClick={() => handleBookClick(book)}
-                        onButtonClick={() => handleAddReadingForBook(book)}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <p className="no-books-message">Вы еще не прочитали книг в этом году.</p>
-                )}
-                <div className="statistics-graphs-container">
-                  {hasYearlyGoal ? (
-                    <>
-                      <Gauge value={Math.round((yearlyRead / yearlyGoal) * 100)} bgColor={"none"}/>
-                      <span>{yearlyRead} книг из {yearlyGoal}</span>
-                      <PrimaryButton label={"Изменить годовую цель"} onClick={handleChangeYearlyGoal}/>
-                    </>
-                  ) : (
-                    <>
-                      <Gauge value={0} bgColor={"none"}/>
-                      <span>Цель не задана</span>
-                      <PrimaryButton label={"Добавить дневную цель"} onClick={handleChangeYearlyGoal}/>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-          }
-          content={
-            yearlyBooks.length > 2 ? (
-              <div className="yearly-reading-books">
-                <div className="reading-books-container">
-                  {yearlyBooks.slice(2, 7).map((book: Book) => (
-                    <CardElement 
-                      key={book.id}
-                      title={book.title} 
-                      description={book.author} 
-                      starsCount={book.rating} 
-                      imageUrl={book.cover}
-                      button={true}
-                      buttonLabel={"Внести прочитанное"}
-                      buttonIconUrl={AddIcon}
-                      buttonChanged={false}
-                      onClick={() => handleBookClick(book)}
-                      onButtonClick={() => handleAddReadingForBook(book)}
-                    />
-                  ))}
-                </div>
-                {yearlyBooks.length > 7 && (
-                  <div className="reading-books-container">
-                    {yearlyBooks.slice(7).map((book: Book) => (
-                      <CardElement 
-                        key={book.id}
-                        title={book.title} 
-                        description={book.author} 
-                        starsCount={book.rating} 
-                        imageUrl={book.cover}
-                        button={true}
-                        buttonLabel={"Внести прочитанное"}
-                        buttonIconUrl={AddIcon}
-                        buttonChanged={false}
-                        onClick={() => handleBookClick(book)}
-                        onButtonClick={() => handleAddReadingForBook(book)}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            ) : null
-          }>
-        </VerticalAccordion>
-      </main>
-
-      <Modal open={isChangeDailyGoalOpen} onClose={() => setIsChangeDailyGoalOpen(false)}>
-        <GoalForm type="daily" onSubmit={() => setIsChangeDailyGoalOpen(false)} />
-      </Modal>
-
-      <Modal open={isAddReadingOpen} onClose={() => setIsAddReadingOpen(false)}>
-        <BookListModal
-          onClose={() => setIsAddReadingOpen(false)}
-          selectionMode={true}
-          onBooksSelected={handleBooksSelected}
+      {/* Модальное окно создания/редактирования цели */}
+      <Modal open={isGoalFormOpen} onClose={() => {
+        setIsGoalFormOpen(false);
+        setEditingGoal(null);
+      }}>
+        <GoalForm
+          goal={editingGoal}
+          onSubmit={handleGoalSubmit}
+          onCancel={() => {
+            setIsGoalFormOpen(false);
+            setEditingGoal(null);
+          }}
         />
       </Modal>
 
-      <Modal open={isReadingFormOpen} onClose={() => {
-        setIsReadingFormOpen(false);
-        sessionStorage.removeItem('selectedBookForReading');
-      }}>
-        {(() => {
-          const selectedBook = sessionStorage.getItem('selectedBookForReading');
-          const bookData = selectedBook ? JSON.parse(selectedBook) : null;
-          return (
-            <ReadingForm
-              bookTitle={selectedBookForReading}
-              bookId={bookData?.id || ''}
-              bookAuthor={bookData?.author || ''}
-              bookRating={bookData?.rating || 5}
-              bookImageUrl={bookData?.imageUrl || ''}
-              onSubmit={handleReadingSubmit}
-            />
-          );
-        })()}
+      {/* Диалог подтверждения удаления */}
+      <Modal open={isDeleteDialogOpen} onClose={() => setIsDeleteDialogOpen(false)}>
+        <ConfirmDialog
+          title="Удаление цели"
+          message="Вы уверены, что хотите удалить эту цель?"
+          onConfirm={confirmDeleteGoal}
+          onCancel={() => {
+            setIsDeleteDialogOpen(false);
+            setGoalToDelete(null);
+          }}
+        />
       </Modal>
-
-      <Modal open={isChangeYearlyGoalOpen} onClose={() => setIsChangeYearlyGoalOpen(false)}>
-        <GoalForm type="yearly" onSubmit={() => setIsChangeYearlyGoalOpen(false)} />
-      </Modal>
-    </>
+    </main>
   );
 }
 

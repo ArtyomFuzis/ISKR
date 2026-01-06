@@ -6,7 +6,7 @@ import PrimaryButton from "../../controls/primary-button/PrimaryButton.tsx";
 import SecondaryButton from "../../controls/secondary-button/SecondaryButton.tsx";
 import Change from "../../../assets/elements/change-pink.svg";
 import Delete from "../../../assets/elements/delete-pink.svg";
-import DeleteIcon from "../../../assets/elements/delete-pink.svg"; // Используем ту же иконку
+import DeleteIcon from "../../../assets/elements/delete-pink.svg";
 import './Book.scss';
 import Stars from "../../stars/Stars.tsx";
 import Modal from "../../controls/modal/Modal.tsx";
@@ -17,8 +17,10 @@ import BookEditMenu from "../../controls/book-edit-menu/BookEditMenu.tsx";
 import ReviewModal from "../../controls/review-modal/ReviewModal.tsx";
 import PlaceholderImage from '../../../assets/images/placeholder.jpg';
 import bookAPI, { type BookDetail, type Review } from '../../../api/bookService';
+import readingService, { type ReadingStatusResponse } from '../../../api/readingService';
 import { getImageUrl, getBookImageUrl, formatRating } from '../../../api/popularService';
 import { russianLocalWordConverter } from '../../../utils/russianLocalWordConverter.ts';
+import ReadingStatusModal from "../../controls/reading-status-modal/ReadingStatusModal.tsx";
 
 function Book() {
   const isAuthenticated = useSelector((state: RootState) => state.auth.isAuthenticated);
@@ -32,6 +34,7 @@ function Book() {
   const [showCollectionForm, setShowCollectionForm] = useState(false);
   const [showEditMenu, setShowEditMenu] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
+  const [showReadingStatusModal, setShowReadingStatusModal] = useState(false);
   const [userRating, setUserRating] = useState(0);
 
   const [loading, setLoading] = useState(true);
@@ -47,6 +50,8 @@ function Book() {
   });
   const [hasMoreReviews, setHasMoreReviews] = useState(false);
   const [reviewLoading, setReviewLoading] = useState(false);
+  const [readingStatus, setReadingStatus] = useState<ReadingStatusResponse | null>(null);
+  const [loadingReadingStatus, setLoadingReadingStatus] = useState(false);
 
   const bookId = parseInt(location.state?.id || '0');
 
@@ -101,8 +106,29 @@ function Book() {
     }
   };
 
+  // Загрузка статуса чтения
+  const loadReadingStatus = async () => {
+    if (!bookId || !isAuthenticated) return;
+
+    setLoadingReadingStatus(true);
+    try {
+      const status = await readingService.getReadingStatus(bookId);
+      setReadingStatus(status);
+    } catch (err: any) {
+      console.error('Error loading reading status:', err);
+    } finally {
+      setLoadingReadingStatus(false);
+    }
+  };
+
   useEffect(() => {
     loadBookData();
+  }, [bookId, isAuthenticated]);
+
+  useEffect(() => {
+    if (isAuthenticated && bookId) {
+      loadReadingStatus();
+    }
   }, [bookId, isAuthenticated]);
 
   const loadMoreReviews = async () => {
@@ -168,12 +194,6 @@ function Book() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    sessionStorage.setItem('updatedBook', JSON.stringify({}));
-    navigate(-1);
-  }
-
   const confirmDelete = async () => {
     try {
       await bookAPI.deleteBook(bookId);
@@ -191,7 +211,7 @@ function Book() {
   };
 
   const handleMarkAsRead = () => {
-    setShowReadingForm(true);
+    setShowReadingStatusModal(true);
   };
 
   const handleDelete = () => {
@@ -294,46 +314,64 @@ function Book() {
     });
   };
 
-  const getReadingStats = () => {
-    if (!bookDetail) return null;
-
-    const bookId = bookDetail.bookId.toString();
-    const idHash = bookId.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
-
-    const totalPages = bookDetail.pageCnt;
-    const pagesReadPercentage = 10 + (idHash % 85);
-    const pagesRead = Math.floor((totalPages * pagesReadPercentage) / 100);
-
-    const daysAgo = 1 + (idHash % 30);
-    const lastReadDate = new Date();
-    lastReadDate.setDate(lastReadDate.getDate() - daysAgo);
-
-    const formatDate = (date: Date, daysAgo: number) => {
-      const day = date.getDate();
-      const month = date.toLocaleString('ru-RU', { month: 'long' });
-      const year = date.getFullYear();
-
-      let daysAgoStr = '';
-      if (daysAgo === 1 || daysAgo === 21) {
-        daysAgoStr = `${daysAgo} день`;
-      } else if ((daysAgo >= 2 && daysAgo <= 4) || (daysAgo >= 22 && daysAgo <= 24)) {
-        daysAgoStr = `${daysAgo} дня`;
-      } else {
-        daysAgoStr = `${daysAgo} дней`;
-      }
-
-      return `${daysAgoStr} назад (${day} ${month} ${year})`;
-    };
-
-    return {
-      pagesRead,
-      totalPages,
-      percentage: Math.round((pagesRead / totalPages) * 100),
-      lastRead: formatDate(lastReadDate, daysAgo)
-    };
+  const handleReadingStatusUpdated = (updatedStatus: ReadingStatusResponse) => {
+    setReadingStatus(updatedStatus);
   };
 
-  const readingStats = formData.isMine && isAuthenticated ? getReadingStats() : null;
+  // Рендер статистики чтения на основе реальных данных
+  const renderReadingStats = () => {
+    if (!readingStatus) return null;
+
+    const percentage = Math.round((readingStatus.pageRead / readingStatus.bookPageCnt) * 100);
+    const lastReadDate = readingStatus.lastReadDate 
+      ? new Date(readingStatus.lastReadDate).toLocaleDateString('ru-RU')
+      : null;
+
+    const getStatusText = (status: string): string => {
+      switch (status) {
+        case 'Planning': return 'Запланировано к прочтению';
+        case 'Reading': return 'В процессе чтения';
+        case 'Delayed': return 'Отложено';
+        case 'GaveUp': return 'Брошено';
+        case 'Finished': return 'Прочитано';
+        default: return 'Неизвестный статус';
+      }
+    };
+
+    return (
+      <div className="book-reading-stats">
+        <div className="stats-header">
+          <h3>Статистика чтения</h3>
+          <span className={`reading-status status-${readingStatus.readingStatus.toLowerCase()}`}>
+            {getStatusText(readingStatus.readingStatus)}
+          </span>
+        </div>
+        <div className="reading-stats-content">
+          <div className="reading-progress">
+            <div className="progress-bar">
+              <div
+                className="progress-fill"
+                style={{ width: `${percentage}%` }}
+              ></div>
+            </div>
+            <div className="progress-text">
+              <span className="pages-read">{readingStatus.pageRead}</span>
+              <span className="pages-separator"> из </span>
+              <span className="pages-total">{readingStatus.bookPageCnt}</span>
+              <span className="pages-label"> страниц</span>
+              <span className="percentage"> ({percentage}%)</span>
+            </div>
+          </div>
+          {lastReadDate && (
+            <div className="last-read-info">
+              <span className="last-read-label">Последний раз читалась:</span>
+              <span className="last-read-date">{lastReadDate}</span>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   const renderLoadingState = () => (
     <div className="loading-state">
@@ -519,41 +557,21 @@ function Book() {
                   </div>
                 </div>
 
-                {isAuthenticated && !formData.isMine && (
+                {isAuthenticated && (
                   <div className="book-action-buttons">
-                    <PrimaryButton label="Отметить прочитанное" onClick={handleMarkAsRead} type="button" />
+                    <PrimaryButton 
+                      label={readingStatus ? "Изменить статус чтения" : "Отметить прочитанное"} 
+                      onClick={handleMarkAsRead} 
+                      type="button" 
+                    />
                     <SecondaryButton label="Добавить в коллекцию" onClick={handleAddToCollection} type="button" />
                   </div>
                 )}
               </div>
             </div>
 
-            {readingStats && (
-              <div className="book-reading-stats">
-                <h3>Статистика чтения</h3>
-                <div className="reading-stats-content">
-                  <div className="reading-progress">
-                    <div className="progress-bar">
-                      <div
-                        className="progress-fill"
-                        style={{ width: `${readingStats.percentage}%` }}
-                      ></div>
-                    </div>
-                    <div className="progress-text">
-                      <span className="pages-read">{readingStats.pagesRead}</span>
-                      <span className="pages-separator"> из </span>
-                      <span className="pages-total">{readingStats.totalPages}</span>
-                      <span className="pages-label"> страниц</span>
-                      <span className="percentage"> ({readingStats.percentage}%)</span>
-                    </div>
-                  </div>
-                  <div className="last-read-info">
-                    <span className="last-read-label">Последний раз читалась:</span>
-                    <span className="last-read-date">{readingStats.lastRead}</span>
-                  </div>
-                </div>
-              </div>
-            )}
+            {/* Статистика чтения */}
+            {isAuthenticated && readingStatus && renderReadingStats()}
 
             <div className="book-reviews-section">
               <div className="reviews-header">
@@ -684,18 +702,16 @@ function Book() {
         />
       </Modal>
 
-      <Modal open={showReadingForm} onClose={() => setShowReadingForm(false)}>
-        <ReadingForm
-          bookTitle={formData.title}
-          bookId={bookId.toString()}
-          bookAuthor={formData.author}
-          bookRating={formData.rating}
-          bookImageUrl={formData.coverUrl || ''}
-          onSubmit={(readingData) => {
-            setShowReadingForm(false);
-          }}
-        />
-      </Modal>
+      {/* Заменяем старое модальное окно ReadingForm на новое ReadingStatusModal */}
+      <ReadingStatusModal
+        open={showReadingStatusModal}
+        onClose={() => setShowReadingStatusModal(false)}
+        bookId={bookId}
+        bookTitle={formData.title}
+        totalPages={parseInt(formData.pages) || 0}
+        currentStatus={readingStatus}
+        onStatusUpdated={handleReadingStatusUpdated}
+      />
 
       <Modal open={showCollectionForm} onClose={() => setShowCollectionForm(false)}>
         <CollectionListModal
