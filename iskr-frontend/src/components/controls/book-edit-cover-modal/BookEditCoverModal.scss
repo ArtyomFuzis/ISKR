@@ -146,3 +146,13 @@
     min-width: 120px;
   }
 }
+.admin-notice {
+  background: rgba(233, 69, 96, 0.1);
+  border: 1px solid rgba(233, 69, 96, 0.3);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1.5rem;
+  color: #ff8888;
+  font-size: 0.95rem;
+  text-align: center;
+}

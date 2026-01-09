@@ -40,6 +40,19 @@
       
       - name: Pull image 
         shell: "cd {{base_path}}/docker/ && docker compose -f esb_nginx.yml pull"
+
+      - name: Ensure that site dir exists 
+        file:
+          path: "{{base_path}}/docker/site_data"
+          state: directory 
+      
+      - name: Remove old content
+        shell: "cd {{base_path}}/docker/site_data && rm -rf *"
+      
+      - name: Copy files from build
+        copy:
+          src:  "/opt/autodeploy/autodeploy/install_tmp/build_artifacts/frontend/"
+          dest: "{{base_path}}/docker/site_data/"
       
       - name: Start nginx
         shell: |

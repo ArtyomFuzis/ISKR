@@ -9,6 +9,7 @@
         <string>INSTALL_KEYCLOAK</string>
         <string>INSTALL_RABBIT</string>
         <string>ANSIBLE_EXTRA_KEYS</string>
+        <string>BUILD_FRONTEND</string>
         <string>INSTALL_ELASTICSEARCH</string>
         <string>INSTALL_CONSUL</string>
         <string>BUILD_INTEGRATION_BUS</string>
@@ -68,6 +69,11 @@
           <defaultValue>false</defaultValue>
         </hudson.model.BooleanParameterDefinition>
         <hudson.model.BooleanParameterDefinition>
+          <name>BUILD_FRONTEND</name>
+          <description>Нужно ли собрать фронтенд?</description>
+          <defaultValue>false</defaultValue>
+        </hudson.model.BooleanParameterDefinition>
+        <hudson.model.BooleanParameterDefinition>
           <name>INSTALL_NGINX</name>
           <description>Нужно ли установить nginx?</description>
           <defaultValue>false</defaultValue>
@@ -117,6 +123,11 @@
             name: &quot;INSTALL_INTEGRATION_BUS&quot;,
             defaultValue: false,
             description: &quot;Нужно ли установить integeration bus?&quot;
+        )
+        booleanParam(
+            name: &quot;BUILD_FRONTEND&quot;,
+            defaultValue: false,
+            description: &quot;Нужно ли собрать фронтенд?&quot;
         )
 		booleanParam(
             name: &quot;INSTALL_NGINX&quot;,
@@ -246,6 +257,22 @@
 						${env.PREPARE_CMD} &amp;&amp; \
 						${env.ANSIBLE_EXEC_PLAYBOOK} ${env.BASE_ANSIBLE_PARAMS} ./esb/deploy-elastic.yml \
 						${params.ANSIBLE_EXTRA_KEYS} --vault-password-file &lt;(echo &quot;$VAULT_PASS&quot;)
+						&quot;&quot;&quot;
+					 }
+				}
+			}
+		}
+		stage(&quot;Build frontend&quot;) {
+			when {
+				expression { params.BUILD_FRONTEND }
+			}
+			steps {
+				script {
+					 withCredentials([string(credentialsId: &apos;ansible-vault-password&apos;, variable: &apos;VAULT_PASS&apos;)]) {
+					  sh &quot;&quot;&quot;
+						${env.PREPARE_CMD} &amp;&amp; \
+						${env.ANSIBLE_EXEC_PLAYBOOK} ${env.BASE_ANSIBLE_PARAMS} ./esb/build-frontend.yml \
+						${params.ANSIBLE_EXTRA_KEYS} --vault-password-file &lt;(echo &quot;$VAULT_PASS&quot;) 
 						&quot;&quot;&quot;
 					 }
 				}

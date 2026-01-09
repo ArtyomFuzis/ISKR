@@ -1,5 +1,7 @@
 // /src/components/controls/book-edit-authors-modal/BookEditAuthorsModal.tsx
 import { useState, useEffect, useCallback } from 'react';
+import { useSelector } from "react-redux";
+import type { RootState } from "../../../redux/store.ts";
 import Modal from '../modal/Modal';
 import PrimaryButton from '../primary-button/PrimaryButton';
 import SecondaryButton from '../secondary-button/SecondaryButton';
@@ -18,6 +20,9 @@ interface BookEditAuthorsModalProps {
 }
 
 function BookEditAuthorsModal({ open, onClose, book, onBookUpdated }: BookEditAuthorsModalProps) {
+  const isAdmin = useSelector((state: RootState) => state.auth.isAdmin);
+  const currentUser = useSelector((state: RootState) => state.auth.user);
+  
   const [currentAuthors, setCurrentAuthors] = useState(book.authors);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchAuthorData[]>([]);
@@ -25,6 +30,9 @@ function BookEditAuthorsModal({ open, onClose, book, onBookUpdated }: BookEditAu
   const [searchLoading, setSearchLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  // Определяем, является ли книга пользователя своей
+  const isMine = currentUser ? book.addedBy.userId === Number(currentUser.id) : false;
 
   // Поиск авторов с задержкой
   useEffect(() => {
@@ -89,7 +97,13 @@ function BookEditAuthorsModal({ open, onClose, book, onBookUpdated }: BookEditAu
         authorIds: currentAuthors.map(a => a.authorId)
       };
 
-      await bookAPI.updateBook(book.bookId, updateData);
+      // Используем административный endpoint, если пользователь - администратор и книга не его
+      if (isAdmin && !isMine) {
+        await bookAPI.updateBookAdmin(book.bookId, updateData);
+      } else {
+        await bookAPI.updateBook(book.bookId, updateData);
+      }
+      
       setSuccess('Авторы успешно обновлены');
       
       setTimeout(async () => {
@@ -127,7 +141,14 @@ function BookEditAuthorsModal({ open, onClose, book, onBookUpdated }: BookEditAu
   return (
     <Modal open={open} onClose={handleClose}>
       <div className="book-edit-authors-modal">
-        <h2 className="modal-title">Редактирование авторов книги</h2>
+        <h2 className="modal-title">
+          {isAdmin && !isMine ? 'Редактирование авторов (Администратор)' : 'Редактирование авторов книги'}
+        </h2>
+        {isAdmin && !isMine && (
+          <p className="admin-notice">
+            Вы редактируете авторов книги как администратор. Книга добавлена пользователем: {book.addedBy.nickname}
+          </p>
+        )}
 
         <div className="current-authors-section">
           <h3 className="section-title">Текущие авторы</h3>

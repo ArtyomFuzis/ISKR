@@ -82,13 +82,10 @@ function Home() {
   }, [isAuthenticated, search.results]);
 
   useEffect(() => {
-    if (debouncedSearchQuery.trim()) {
-      dispatch(setQuery(debouncedSearchQuery));
-      dispatch(resetSearch());
-      dispatch(performSearch({ reset: true }));
-    } else {
-      dispatch(clearSearch());
-    }
+    dispatch(setQuery(debouncedSearchQuery));
+    dispatch(resetSearch());
+    dispatch(performSearch({ reset: true }));
+    
   }, [debouncedSearchQuery, dispatch]);
 
   useEffect(() => {

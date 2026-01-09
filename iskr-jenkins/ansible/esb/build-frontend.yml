@@ -1,0 +1,52 @@
+---  
+  - name: Build frontend
+    hosts: localhost
+    tasks: 
+      - name: Ensure that directory "build_src_frontend" exists
+        file:
+          path: "{{base_path}}/autodeploy/install_tmp/build_src_frontend/"
+          state: directory 
+      
+      - name: Ensure that build directory for lab exists
+        file:
+          path: "{{base_path}}/autodeploy/install_tmp/build_src_frontend"
+          state: directory 
+
+      - name: Remove all old build srcs 
+        shell: "cd {{base_path}}/autodeploy/install_tmp/build_src_frontend/ && rm -rf *"
+
+      - name: Copy frontend src
+        synchronize:
+          src: "/workspace/apps/iskr-frontend/"
+          dest: "{{base_path}}/autodeploy/install_tmp/build_src_frontend/"
+      
+      - name: Install deps
+        shell: "cd {{base_path}}/autodeploy/install_tmp/build_src_frontend/ && npm install"
+      
+      - name: Build frontend
+        shell: "cd {{base_path}}/autodeploy/install_tmp/build_src_frontend/ && npm run build"
+      
+      - name: Ensure that build_artifacts dir existst
+        file:  
+          path: "{{base_path}}/autodeploy/install_tmp/build_artifacts"
+          state: directory
+
+      - name: Ensure that artifact dir exists
+        file:
+          path: "{{base_path}}/autodeploy/install_tmp/build_artifacts/frontend"
+          state: directory
+      
+      - name: Remove old files
+        shell: "cd {{base_path}}/autodeploy/install_tmp/build_artifacts/frontend/ && rm -rf * "
+      
+      - name: Copy to artifact dir
+        copy:
+          src: "{{base_path}}/autodeploy/install_tmp/build_src_frontend/dist/"
+          dest: "{{base_path}}/autodeploy/install_tmp/build_artifacts/frontend/"
+          remote_src: yes
+        
+      
+      
+
+      
+      

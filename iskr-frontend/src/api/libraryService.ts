@@ -94,9 +94,7 @@ export const libraryAPI = {
       
       if (response.data.data.state === 'OK') {
         // Исключаем вишлист из обычных коллекций
-        return response.data.data.key.collections.filter(
-          collection => collection.bookCollectionType !== 'Wishlist'
-        );
+        return response.data.data.key.collections
       }
       
       throw new Error(response.data.data.message || 'Failed to fetch library collections');

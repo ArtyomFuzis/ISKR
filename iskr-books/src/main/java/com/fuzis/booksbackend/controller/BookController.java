@@ -44,7 +44,7 @@ public class BookController {
 
     @PutMapping("/{id}")
     public ResponseEntity<ChangeDTO<Object>> updateBook(
-            @RequestHeader Integer userId,
+            @RequestHeader(required = false) Integer userId,
             @PathVariable @Min(1) Integer id,
             @Valid @RequestBody BookUpdateDTO bookUpdateDTO) {
         return httpUtil.handleServiceResponse(bookService.updateBook(userId, id, bookUpdateDTO));
@@ -52,7 +52,7 @@ public class BookController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<ChangeDTO<Object>> deleteBook(
-            @RequestHeader Integer userId,
+            @RequestHeader(required = false) Integer userId,
             @PathVariable @Min(1) Integer id) {
         return httpUtil.handleServiceResponse(bookService.deleteBook(userId, id));
     }

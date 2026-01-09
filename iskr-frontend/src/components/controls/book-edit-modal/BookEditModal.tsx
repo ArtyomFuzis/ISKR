@@ -1,5 +1,7 @@
 // /src/components/controls/book-edit-modal/BookEditModal.tsx
 import { useState, useEffect } from 'react';
+import { useSelector } from "react-redux";
+import type { RootState } from "../../../redux/store.ts";
 import Modal from '../modal/Modal';
 import PrimaryButton from '../primary-button/PrimaryButton';
 import SecondaryButton from '../secondary-button/SecondaryButton';
@@ -15,6 +17,9 @@ interface BookEditModalProps {
 }
 
 function BookEditModal({ open, onClose, book, onBookUpdated }: BookEditModalProps) {
+  const isAdmin = useSelector((state: RootState) => state.auth.isAdmin);
+  const currentUser = useSelector((state: RootState) => state.auth.user);
+  
   const [title, setTitle] = useState(book.title);
   const [subtitle, setSubtitle] = useState(book.subtitle || '');
   const [description, setDescription] = useState(book.description || '');
@@ -23,6 +28,9 @@ function BookEditModal({ open, onClose, book, onBookUpdated }: BookEditModalProp
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  // Определяем, является ли книга пользователя своей
+  const isMine = currentUser ? book.addedBy.userId === Number(currentUser.id) : false;
 
   useEffect(() => {
     setTitle(book.title);
@@ -59,7 +67,13 @@ function BookEditModal({ open, onClose, book, onBookUpdated }: BookEditModalProp
         pageCnt: pageCntNum,
       };
 
-      await bookAPI.updateBook(book.bookId, updateData);
+      // Используем административный endpoint, если пользователь - администратор и книга не его
+      if (isAdmin && !isMine) {
+        await bookAPI.updateBookAdmin(book.bookId, updateData);
+      } else {
+        await bookAPI.updateBook(book.bookId, updateData);
+      }
+      
       setSuccess('Информация о книге успешно обновлена');
       
       // Ждем немного, чтобы показать сообщение об успехе, затем обновляем данные книги и закрываем
@@ -112,7 +126,14 @@ function BookEditModal({ open, onClose, book, onBookUpdated }: BookEditModalProp
   return (
     <Modal open={open} onClose={handleClose}>
       <div className="book-edit-modal">
-        <h2 className="modal-title">Редактирование информации о книге</h2>
+        <h2 className="modal-title">
+          {isAdmin && !isMine ? 'Редактирование книги (Администратор)' : 'Редактирование информации о книге'}
+        </h2>
+        {isAdmin && !isMine && (
+          <p className="admin-notice">
+            Вы редактируете книгу как администратор. Книга добавлена пользователем: {book.addedBy.nickname}
+          </p>
+        )}
 
         <div className="form-group">
           <label htmlFor="title" className="form-label">

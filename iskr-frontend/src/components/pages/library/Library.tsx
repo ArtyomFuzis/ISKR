@@ -1,3 +1,4 @@
+// /src/components/pages/library/Library.tsx
 import { useEffect, useState, useCallback } from "react";
 import "../home/Home.scss";
 import "../statistic/Statistic.scss";
@@ -22,6 +23,9 @@ import PlaceholderImage from '../../../assets/images/placeholder.jpg';
 import CreateBookModal from "../../controls/create-book-modal/CreateBookModal";
 import CreateCollectionModal from "../../controls/create-collection-modal/CreateCollectionModal";
 import wishlistService from '../../../api/wishlistService';
+import { selectIsAdmin } from "../../../redux/authSlice";
+import ManageAuthorsModal from "../../controls/manage-authors-modal/ManageAuthorsModal.tsx";
+import ManageGenresModal from "../../controls/manage-genres-modal/ManageGenresModal.tsx";
 
 // Локальные интерфейсы для компонента
 interface Book {
@@ -44,6 +48,7 @@ interface Collection {
 
 function Library() {
   const { user, isAuthenticated } = useSelector((state: RootState) => state.auth);
+  const isAdmin = useSelector(selectIsAdmin);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -78,6 +83,10 @@ function Library() {
   // Модальное окно для сообщений
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [messageModalContent, setMessageModalContent] = useState({ title: '', message: '' });
+
+  // Модальные окна для управления авторами и жанрами
+  const [showManageAuthors, setShowManageAuthors] = useState(false);
+  const [showManageGenres, setShowManageGenres] = useState(false);
 
   // Функция для показа сообщений
   const showErrorMessage = (title: string, message: string) => {
@@ -290,6 +299,15 @@ function Library() {
         'Не удалось удалить книгу из вишлиста. Попробуйте еще раз.'
       );
     }
+  };
+
+  // Функции для управления авторами и жанрами
+  const handleManageAuthorsClick = () => {
+    setShowManageAuthors(true);
+  };
+
+  const handleManageGenresClick = () => {
+    setShowManageGenres(true);
   };
 
   // Эффект для обработки обновлений из других страниц
@@ -625,6 +643,28 @@ function Library() {
   return (
     <>
       <main>
+        {isAdmin && (
+          <div className="top-container">
+            <div className="container-title-with-button">
+              <h2>Администратор</h2>
+              <div className="admin-buttons">
+                <PrimaryButton 
+                  label={"Управление авторами"} 
+                  onClick={handleManageAuthorsClick} 
+                  style={{ marginRight: '10px' }}
+                />
+                <PrimaryButton 
+                  label={"Управление жанрами"} 
+                  onClick={handleManageGenresClick} 
+                />
+              </div>
+            </div>
+            <div className="admin-notice">
+              <p>Вы вошли как администратор. Вы можете управлять авторами и жанрами системы.</p>
+            </div>
+          </div>
+        )}
+
         <div className="top-container">
           <div className="container-title-with-button">
             <h2>Мои книги</h2>
@@ -661,6 +701,16 @@ function Library() {
         open={isCreateCollectionOpen}
         onClose={() => setIsCreateCollectionOpen(false)}
         onCollectionCreated={handleCollectionCreated}
+      />
+
+      <ManageAuthorsModal
+        open={showManageAuthors}
+        onClose={() => setShowManageAuthors(false)}
+      />
+
+      <ManageGenresModal
+        open={showManageGenres}
+        onClose={() => setShowManageGenres(false)}
       />
 
       <Modal open={isConfirmClearWishlist} onClose={() => setIsConfirmClearWishlist(false)}>

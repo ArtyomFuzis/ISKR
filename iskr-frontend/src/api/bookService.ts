@@ -16,7 +16,6 @@ export interface ReviewResponse {
   };
 }
 
-// Обновляем интерфейс Review для соответствия ответу сервера
 export interface Review {
   reviewId: number;
   user: {
@@ -35,7 +34,7 @@ export interface Review {
       };
     } | null;
   };
-  score: number; // В 10-балльной системе (5 звёзд = 10)
+  score: number;
   reviewText: string;
   bookId: number;
 }
@@ -89,28 +88,6 @@ export interface BookDetail {
   reviewsCount: number;
 }
 
-export interface Review {
-  reviewId: number;
-  user: {
-    userId: number;
-    username: string;
-    registeredDate: string;
-    nickname: string;
-    profileImage: {
-      imglId: number;
-      imageData: {
-        imgdId: number;
-        uuid: string;
-        size: number;
-        mimeType: string;
-        extension: string;
-      };
-    } | null;
-  };
-  score: number;
-  reviewText: string;
-}
-
 export interface ReviewsResponse {
   reviews: Review[];
   batch: number;
@@ -129,11 +106,15 @@ export interface UpdateBookData {
   addedBy?: number;
   authorIds?: number[];
   genreIds?: number[];
-  photoLink?: number; // Изменено с объекта на число
+  photoLink?: number;
+}
+
+export interface AdminReviewUpdateData {
+  reviewText: string;
+  score: number;
 }
 
 export const bookAPI = {
-  // Получение детальной информации о книге
   getBook: async (bookId: number): Promise<BookDetail> => {
     try {
       const response = await axios.get<ApiResponse<BookDetail>>(`${OAPI_BASE_URL}/v1/books`, {
@@ -151,7 +132,6 @@ export const bookAPI = {
     }
   },
 
-  // Получение отзывов о книге
   getBookReviews: async (
     bookId: number,
     batch: number = 10,
@@ -176,7 +156,6 @@ export const bookAPI = {
     }
   },
 
-  // Обновление информации о книге
   updateBook: async (bookId: number, data: UpdateBookData): Promise<BookDetail> => {
     try {
       const response = await axios.put<ApiResponse<BookDetail>>(
@@ -196,9 +175,8 @@ export const bookAPI = {
       throw new Error(response.data.data.message || 'Не удалось обновить книгу');
     } catch (error: any) {
       console.error('Error updating book:', error);
-      console.error('Request data:', data); // Для отладки
+      console.error('Request data:', data);
 
-      // Обработка специфичных ошибок
       if (error.response?.data?.data?.details) {
         const errorDetails = error.response.data.data.details;
         const errorMessage = errorDetails.message || 'Ошибка при обновлении книги';
@@ -211,7 +189,39 @@ export const bookAPI = {
     }
   },
 
-  // Загрузка изображения для книги
+  updateBookAdmin: async (bookId: number, data: UpdateBookData): Promise<BookDetail> => {
+    try {
+      const response = await axios.put<ApiResponse<BookDetail>>(
+        `${OAPI_BASE_URL}/v1/book/admin?bookId=${bookId}`,
+        data,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (response.data.data.state === 'OK') {
+        return response.data.data.key;
+      }
+
+      throw new Error(response.data.data.message || 'Не удалось обновить книгу (админ)');
+    } catch (error: any) {
+      console.error('Error updating book as admin:', error);
+      console.error('Request data:', data);
+
+      if (error.response?.data?.data?.details) {
+        const errorDetails = error.response.data.data.details;
+        const errorMessage = errorDetails.message || 'Ошибка при обновлении книги (админ)';
+        const errorWithDetails = new Error(errorMessage);
+        (errorWithDetails as any).response = error.response;
+        throw errorWithDetails;
+      }
+
+      throw error;
+    }
+  },
+
   uploadBookImage: async (file: File): Promise<any> => {
     try {
       const formData = new FormData();
@@ -230,7 +240,6 @@ export const bookAPI = {
     }
   },
 
-  // Удаление книги
   deleteBook: async (bookId: number): Promise<void> => {
     try {
       const response = await axios.delete<ApiResponse<void>>(
@@ -242,6 +251,21 @@ export const bookAPI = {
       }
     } catch (error: any) {
       console.error('Error deleting book:', error);
+      throw error;
+    }
+  },
+
+  deleteBookAdmin: async (bookId: number): Promise<void> => {
+    try {
+      const response = await axios.delete<ApiResponse<void>>(
+        `${OAPI_BASE_URL}/v1/book/admin?bookId=${bookId}`
+      );
+
+      if (response.data.data.state !== 'OK') {
+        throw new Error(response.data.data.message || 'Не удалось удалить книгу (админ)');
+      }
+    } catch (error: any) {
+      console.error('Error deleting book as admin:', error);
       throw error;
     }
   },
@@ -292,6 +316,33 @@ export const bookAPI = {
     }
   },
 
+  updateReviewAdmin: async (
+    bookId: number,
+    userId: number,
+    data: AdminReviewUpdateData
+  ): Promise<Review> => {
+    try {
+      const response = await axios.put<ReviewResponse>(
+        `${OAPI_BASE_URL}/v1/book/reviews/admin?bookId=${bookId}&X-User-Change-ID=${userId}`,
+        data,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (response.data.data.state === 'OK' && response.data.data.key) {
+        return response.data.data.key;
+      }
+
+      throw new Error(response.data.data.message || 'Не удалось обновить отзыв (админ)');
+    } catch (error: any) {
+      console.error('Error updating review as admin:', error);
+      throw error;
+    }
+  },
+
   deleteReview: async (bookId: number): Promise<void> => {
     try {
       const response = await axios.delete<ReviewResponse>(
@@ -303,6 +354,21 @@ export const bookAPI = {
       }
     } catch (error: any) {
       console.error('Error deleting review:', error);
+      throw error;
+    }
+  },
+
+  deleteReviewAdmin: async (bookId: number, userId: number): Promise<void> => {
+    try {
+      const response = await axios.delete<ReviewResponse>(
+        `${OAPI_BASE_URL}/v1/book/reviews/admin?bookId=${bookId}&X-User-Change-ID=${userId}`
+      );
+
+      if (response.data.data.state !== 'OK') {
+        throw new Error(response.data.data.message || 'Не удалось удалить отзыв (админ)');
+      }
+    } catch (error: any) {
+      console.error('Error deleting review as admin:', error);
       throw error;
     }
   },
@@ -319,7 +385,6 @@ export const bookAPI = {
 
       return null;
     } catch (error: any) {
-      // Если отзыв не найден (404), возвращаем null
       if (error.response?.status === 404) {
         return null;
       }
@@ -327,6 +392,7 @@ export const bookAPI = {
       throw error;
     }
   },
+
   createBook: async (data: {
     title: string;
     subtitle?: string | null;
@@ -371,4 +437,4 @@ export const bookAPI = {
   },
 };
 
-export default bookAPI; 
+export default bookAPI;

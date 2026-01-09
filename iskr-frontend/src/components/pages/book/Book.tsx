@@ -1,3 +1,4 @@
+// /src/components/pages/book/Book.tsx
 import { useSelector } from "react-redux";
 import type { RootState } from "../../../redux/store.ts";
 import { useState, useEffect } from "react";
@@ -21,10 +22,12 @@ import readingService, { type ReadingStatusResponse } from '../../../api/reading
 import { getImageUrl, getBookImageUrl, formatRating } from '../../../api/popularService';
 import { russianLocalWordConverter } from '../../../utils/russianLocalWordConverter.ts';
 import ReadingStatusModal from "../../controls/reading-status-modal/ReadingStatusModal.tsx";
+import { selectIsAdmin } from "../../../redux/authSlice";
 
 function Book() {
   const isAuthenticated = useSelector((state: RootState) => state.auth.isAuthenticated);
   const currentUser = useSelector((state: RootState) => state.auth.user);
+  const isAdmin = useSelector(selectIsAdmin);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -52,6 +55,10 @@ function Book() {
   const [reviewLoading, setReviewLoading] = useState(false);
   const [readingStatus, setReadingStatus] = useState<ReadingStatusResponse | null>(null);
   const [loadingReadingStatus, setLoadingReadingStatus] = useState(false);
+
+  const [adminSelectedReview, setAdminSelectedReview] = useState<Review | null>(null);
+  const [showAdminReviewModal, setShowAdminReviewModal] = useState(false);
+  const [showAdminDeleteReviewDialog, setShowAdminDeleteReviewDialog] = useState(false);
 
   const bookId = parseInt(location.state?.id || '0');
 
@@ -106,7 +113,6 @@ function Book() {
     }
   };
 
-  // Загрузка статуса чтения
   const loadReadingStatus = async () => {
     if (!bookId || !isAuthenticated) return;
 
@@ -196,7 +202,11 @@ function Book() {
 
   const confirmDelete = async () => {
     try {
-      await bookAPI.deleteBook(bookId);
+      if (isAdmin && !formData.isMine) {
+        await bookAPI.deleteBookAdmin(bookId);
+      } else {
+        await bookAPI.deleteBook(bookId);
+      }
       setShowDeleteDialog(false);
       navigate('/');
     } catch (err: any) {
@@ -298,6 +308,67 @@ function Book() {
     }
   };
 
+  const handleAdminReviewEdit = (review: Review) => {
+    setAdminSelectedReview(review);
+    setShowAdminReviewModal(true);
+  };
+
+  const handleAdminReviewDelete = (review: Review) => {
+    setAdminSelectedReview(review);
+    setShowAdminDeleteReviewDialog(true);
+  };
+
+  const handleAdminReviewSave = async (score: number, reviewText: string) => {
+    if (!adminSelectedReview) return;
+
+    try {
+      setReviewLoading(true);
+      const scoreIn10 = score * 2;
+      const updatedReview = await bookAPI.updateReviewAdmin(
+        bookId,
+        adminSelectedReview.user.userId,
+        { reviewText, score: scoreIn10 }
+      );
+
+      setReviews(prev => prev.map(review =>
+        review.reviewId === updatedReview.reviewId ? updatedReview : review
+      ));
+
+      setShowAdminReviewModal(false);
+      setAdminSelectedReview(null);
+    } catch (error: any) {
+      console.error('Error updating review as admin:', error);
+      throw error;
+    } finally {
+      setReviewLoading(false);
+    }
+  };
+
+  const confirmAdminDeleteReview = async () => {
+    if (!adminSelectedReview) return;
+
+    try {
+      await bookAPI.deleteReviewAdmin(bookId, adminSelectedReview.user.userId);
+
+      setReviews(prev => prev.filter(review =>
+        review.reviewId !== adminSelectedReview.reviewId
+      ));
+
+      if (bookDetail) {
+        setBookDetail({
+          ...bookDetail,
+          reviewsCount: Math.max(0, bookDetail.reviewsCount - 1)
+        });
+      }
+
+      setShowAdminDeleteReviewDialog(false);
+      setAdminSelectedReview(null);
+    } catch (error: any) {
+      console.error('Error deleting review as admin:', error);
+      alert('Ошибка при удалении отзыва: ' + error.message);
+    }
+  };
+
   const handleAuthorClick = (userId: number) => {
     navigate('/profile', {
       state: {
@@ -318,7 +389,6 @@ function Book() {
     setReadingStatus(updatedStatus);
   };
 
-  // Рендер статистики чтения на основе реальных данных
   const renderReadingStats = () => {
     if (!readingStatus) return null;
 
@@ -443,7 +513,7 @@ function Book() {
               </div>
             </div>
 
-            {formData.isMine && isAuthenticated && (
+            {(formData.isMine || isAdmin) && isAuthenticated && (
               <div className="book-actions">
                 <button onClick={handleEditBook} title="Редактировать">
                   <img src={Change} alt="Редактировать" />
@@ -570,7 +640,6 @@ function Book() {
               </div>
             </div>
 
-            {/* Статистика чтения */}
             {isAuthenticated && readingStatus && renderReadingStats()}
 
             <div className="book-reviews-section">
@@ -587,7 +656,6 @@ function Book() {
                 </span>
               </div>
 
-              {/* Мой отзыв */}
               {userReview && (
                 <div className="my-review-section">
                   <div className="section-header">
@@ -633,7 +701,6 @@ function Book() {
                 </div>
               )}
 
-              {/* Все отзывы */}
               {reviews.length > 0 ? (
                 <>
                   <div className="reviews-list">
@@ -658,7 +725,27 @@ function Book() {
                                 </span>
                               </div>
                             </div>
-                            <Stars count={formatRating(review.score)} size="small" showValue={true} />
+                            <div className="review-header-right">
+                              <Stars count={formatRating(review.score)} size="small" showValue={true} />
+                              {isAdmin && isAuthenticated && review.user.userId !== Number(currentUser?.id) && (
+                                <div className="review-admin-actions">
+                                  <button
+                                    className="edit-review-btn"
+                                    onClick={() => handleAdminReviewEdit(review)}
+                                    title="Редактировать отзыв (Администратор)"
+                                  >
+                                    ✎
+                                  </button>
+                                  <button
+                                    className="delete-review-btn"
+                                    onClick={() => handleAdminReviewDelete(review)}
+                                    title="Удалить отзыв (Администратор)"
+                                  >
+                                    <img src={DeleteIcon} alt="Удалить отзыв" />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           </div>
                           <div className="review-content">
                             <p className="review-text">{review.reviewText}</p>
@@ -702,7 +789,15 @@ function Book() {
         />
       </Modal>
 
-      {/* Заменяем старое модальное окно ReadingForm на новое ReadingStatusModal */}
+      <Modal open={showAdminDeleteReviewDialog} onClose={() => setShowAdminDeleteReviewDialog(false)}>
+        <ConfirmDialog
+          title="Удаление отзыва (Администратор)"
+          message={`Вы уверены, что хотите удалить отзыв пользователя ${adminSelectedReview?.user.nickname}?`}
+          onConfirm={confirmAdminDeleteReview}
+          onCancel={() => setShowAdminDeleteReviewDialog(false)}
+        />
+      </Modal>
+
       <ReadingStatusModal
         open={showReadingStatusModal}
         onClose={() => setShowReadingStatusModal(false)}
@@ -729,7 +824,19 @@ function Book() {
         loading={reviewLoading}
       />
 
-      {/* Модальное окно редактирования книги */}
+      <ReviewModal
+        open={showAdminReviewModal}
+        onClose={() => {
+          setShowAdminReviewModal(false);
+          setAdminSelectedReview(null);
+        }}
+        onSubmit={handleAdminReviewSave}
+        initialScore={adminSelectedReview ? adminSelectedReview.score / 2 : 0}
+        initialReviewText={adminSelectedReview?.reviewText || ''}
+        loading={reviewLoading}
+        title="Редактирование отзыва (Администратор)"
+      />
+
       {bookDetail && (
         <Modal open={showEditMenu} onClose={() => setShowEditMenu(false)}>
           <BookEditMenu

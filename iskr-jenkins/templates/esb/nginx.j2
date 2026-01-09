@@ -13,6 +13,7 @@ services:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
       - ./image_data:/var/www/images:ro
+      - ./site_data:/var/www/site:ro
     networks:
       -  {{ network_name }}
     extra_hosts:

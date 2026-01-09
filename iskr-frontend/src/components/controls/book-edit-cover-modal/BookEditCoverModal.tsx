@@ -1,11 +1,13 @@
 // /src/components/controls/book-edit-cover-modal/BookEditCoverModal.tsx
 import { useState, useRef, ChangeEvent } from 'react';
+import { useSelector } from "react-redux";
+import type { RootState } from "../../../redux/store.ts";
 import Modal from '../modal/Modal';
 import PrimaryButton from '../primary-button/PrimaryButton';
 import SecondaryButton from '../secondary-button/SecondaryButton';
 import './BookEditCoverModal.scss';
 import bookAPI from '../../../api/bookService';
-import type { BookDetail } from '../../../api/bookService';
+import type { BookDetail, UpdateBookData } from '../../../api/bookService';
 import PlaceholderImage from '../../../assets/images/placeholder.jpg';
 
 interface BookEditCoverModalProps {
@@ -16,12 +18,18 @@ interface BookEditCoverModalProps {
 }
 
 function BookEditCoverModal({ open, onClose, book, onBookUpdated }: BookEditCoverModalProps) {
+  const isAdmin = useSelector((state: RootState) => state.auth.isAdmin);
+  const currentUser = useSelector((state: RootState) => state.auth.user);
+  
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Определяем, является ли книга пользователя своей
+  const isMine = currentUser ? book.addedBy.userId === Number(currentUser.id) : false;
 
   const handleFileSelect = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -73,12 +81,18 @@ function BookEditCoverModal({ open, onClose, book, onBookUpdated }: BookEditCove
           return;
         }
         
-        // 2. Обновляем только обложку книги - отправляем просто число!
-        const updateData = {
+        // 2. Обновляем только обложку книги
+        const updateData: UpdateBookData = {
           photoLink: imageId
         };
 
-        await bookAPI.updateBook(book.bookId, updateData);
+        // Используем административный endpoint, если пользователь - администратор и книга не его
+        if (isAdmin && !isMine) {
+          await bookAPI.updateBookAdmin(book.bookId, updateData);
+        } else {
+          await bookAPI.updateBook(book.bookId, updateData);
+        }
+        
         setSuccess('Обложка книги успешно изменена');
         
         // Ждем немного, чтобы показать сообщение об успехе, затем обновляем данные книги и закрываем
@@ -131,7 +145,14 @@ function BookEditCoverModal({ open, onClose, book, onBookUpdated }: BookEditCove
   return (
     <Modal open={open} onClose={handleClose}>
       <div className="book-edit-cover-modal">
-        <h2 className="modal-title">Смена обложки книги</h2>
+        <h2 className="modal-title">
+          {isAdmin && !isMine ? 'Смена обложки (Администратор)' : 'Смена обложки книги'}
+        </h2>
+        {isAdmin && !isMine && (
+          <p className="admin-notice">
+            Вы изменяете обложку книги как администратор. Книга добавлена пользователем: {book.addedBy.nickname}
+          </p>
+        )}
         
         <div className="cover-preview-container">
           <div className="current-cover">

@@ -1,5 +1,7 @@
 // /src/components/controls/book-edit-genres-modal/BookEditGenresModal.tsx
 import { useState, useEffect } from 'react';
+import { useSelector } from "react-redux";
+import type { RootState } from "../../../redux/store.ts";
 import Modal from '../modal/Modal';
 import PrimaryButton from '../primary-button/PrimaryButton';
 import SecondaryButton from '../secondary-button/SecondaryButton';
@@ -18,6 +20,9 @@ interface BookEditGenresModalProps {
 }
 
 function BookEditGenresModal({ open, onClose, book, onBookUpdated }: BookEditGenresModalProps) {
+  const isAdmin = useSelector((state: RootState) => state.auth.isAdmin);
+  const currentUser = useSelector((state: RootState) => state.auth.user);
+  
   const [currentGenres, setCurrentGenres] = useState(book.genres);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchGenreData[]>([]);
@@ -25,6 +30,9 @@ function BookEditGenresModal({ open, onClose, book, onBookUpdated }: BookEditGen
   const [searchLoading, setSearchLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  // Определяем, является ли книга пользователя своей
+  const isMine = currentUser ? book.addedBy.userId === Number(currentUser.id) : false;
 
   // Поиск жанров с задержкой
   useEffect(() => {
@@ -86,7 +94,13 @@ function BookEditGenresModal({ open, onClose, book, onBookUpdated }: BookEditGen
         genreIds: currentGenres.map(g => g.genreId)
       };
 
-      await bookAPI.updateBook(book.bookId, updateData);
+      // Используем административный endpoint, если пользователь - администратор и книга не его
+      if (isAdmin && !isMine) {
+        await bookAPI.updateBookAdmin(book.bookId, updateData);
+      } else {
+        await bookAPI.updateBook(book.bookId, updateData);
+      }
+      
       setSuccess('Жанры успешно обновлены');
       
       setTimeout(async () => {
@@ -129,7 +143,14 @@ function BookEditGenresModal({ open, onClose, book, onBookUpdated }: BookEditGen
   return (
     <Modal open={open} onClose={handleClose}>
       <div className="book-edit-genres-modal">
-        <h2 className="modal-title">Редактирование жанров книги</h2>
+        <h2 className="modal-title">
+          {isAdmin && !isMine ? 'Редактирование жанров (Администратор)' : 'Редактирование жанров книги'}
+        </h2>
+        {isAdmin && !isMine && (
+          <p className="admin-notice">
+            Вы редактируете жанры книги как администратор. Книга добавлена пользователем: {book.addedBy.nickname}
+          </p>
+        )}
 
         <div className="current-genres-section">
           <h3 className="section-title">Текущие жанры</h3>

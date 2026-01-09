@@ -1,3 +1,4 @@
+// /src/components/controls/review-modal/ReviewModal.tsx
 import { useState, useEffect } from 'react';
 import Modal from '../modal/Modal';
 import PrimaryButton from '../primary-button/PrimaryButton';
@@ -12,6 +13,7 @@ interface ReviewModalProps {
   initialScore?: number;
   initialReviewText?: string;
   loading?: boolean;
+  title?: string;
 }
 
 function ReviewModal({ 
@@ -20,7 +22,8 @@ function ReviewModal({
   onSubmit, 
   initialScore = 0,
   initialReviewText = '',
-  loading = false
+  loading = false,
+  title
 }: ReviewModalProps) {
   const [score, setScore] = useState(initialScore);
   const [reviewText, setReviewText] = useState(initialReviewText);
@@ -63,7 +66,7 @@ function ReviewModal({
     <Modal open={open} onClose={handleClose}>
       <div className="review-modal">
         <h2 className="modal-title">
-          {initialReviewText ? 'Редактировать отзыв' : 'Написать отзыв'}
+          {title || (initialReviewText ? 'Редактировать отзыв' : 'Написать отзыв')}
         </h2>
 
         <div className="rating-section">
@@ -78,7 +81,7 @@ function ReviewModal({
 
         <div className="review-text-section">
           <label htmlFor="review-text" className="review-text-label">
-            Текст отзыва * {/* Оставили только одну звездочку */}
+            Текст отзыва *
           </label>
           <textarea
             id="review-text"

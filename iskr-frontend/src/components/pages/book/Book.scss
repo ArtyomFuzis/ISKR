@@ -16,6 +16,7 @@
     cursor: pointer;
     color: #ffffff;
     transition: transform 0.2s, color 0.2s;
+    z-index: 10; // Добавляем z-index
 
     &:hover {
         color: $pink;
@@ -70,11 +71,13 @@
     justify-content: space-between;
     align-items: flex-start;
     margin-bottom: 2rem;
+    position: relative; // Добавляем относительное позиционирование
 
     .book-title-section {
+        flex: 1;
         .book-title {
             font-size: 2rem;
-            margin: 0 0 0.5rem 0; // Уменьшаем отступ снизу
+            margin: 0 0 0.5rem 0;
             color: white;
         }
 
@@ -105,6 +108,9 @@
     .book-actions {
         display: flex;
         gap: 0.5rem;
+        position: absolute; // Абсолютное позиционирование
+        right: 80px; // Отступ от правого края
+        top: 10px; // Выравниваем по верху
 
         button {
             background: none;
@@ -298,7 +304,6 @@
     }
 }
 
-
 .book-reading-stats {
     margin: 3rem 0;
     padding: 2rem;
@@ -431,6 +436,12 @@
                 gap: 1rem;
             }
 
+            .review-header-right {
+                display: flex;
+                align-items: center;
+                gap: 1rem;
+            }
+
             .review-user {
                 display: flex;
                 align-items: center;
@@ -461,6 +472,51 @@
                     .review-date {
                         font-size: 0.8rem;
                         color: rgba(255, 255, 255, 0.6);
+                    }
+                }
+            }
+
+            .review-admin-actions {
+                display: flex;
+                gap: 0.5rem;
+                
+                .edit-review-btn,
+                .delete-review-btn {
+                    background: none;
+                    border: none;
+                    cursor: pointer;
+                    padding: 0.5rem;
+                    border-radius: 4px;
+                    transition: all 0.2s;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    opacity: 0.7;
+
+                    &:hover {
+                        opacity: 1;
+                        background: rgba($pink, 0.1);
+                        transform: scale(1.1);
+                    }
+                }
+
+                .edit-review-btn {
+                    color: $pink;
+                    font-size: 1.2rem;
+                    line-height: 1;
+                }
+
+                .delete-review-btn {
+                    padding: 0.4rem;
+                    
+                    img {
+                        height: 1rem;
+                        width: 1rem;
+                        opacity: 0.8;
+                    }
+                    
+                    &:hover img {
+                        opacity: 1;
                     }
                 }
             }
@@ -496,7 +552,6 @@
     }
 }
 
-// Стили для состояний загрузки и ошибок
 .loading-state,
 .error-state {
     display: flex;
@@ -571,7 +626,6 @@
     }
   }
 
-  // Добавим стиль для поля "Количество страниц"
   &:has(#pages) .field-value {
     font-weight: 500;
     color: $pink;
@@ -624,13 +678,12 @@
       }
 
       .delete-review-btn {
-        padding: 0.4rem; /* Уменьшили отступы для иконки */
+        padding: 0.4rem;
         
         img {
-          height: 1rem; /* Уменьшили размер иконки */
+          height: 1rem;
           width: 1rem;
           opacity: 0.8;
-          transition: opacity 0.2s;
         }
         
         &:hover img {
@@ -672,7 +725,6 @@
   }
 }
 
-// Обновим стили для секции статистики чтения
 .book-reading-stats {
   margin: 3rem 0;
   padding: 2rem;
@@ -803,7 +855,6 @@
   }
 }
 
-// Обновим стили для кнопок действий с книгой
 .book-action-buttons {
   display: flex;
   gap: 1rem;

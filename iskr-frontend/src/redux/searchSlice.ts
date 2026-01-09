@@ -48,10 +48,7 @@ export const performSearch = createAsyncThunk(
     try {
       const state = getState() as { search: SearchState };
       const { query, types, genre, limit } = state.search;
-      
-      if (!query.trim()) {
-        return { books: [], users: [], collections: [], total: 0, hasMore: false };
-      }
+    
       
       const searchParams = {
         Query: query,

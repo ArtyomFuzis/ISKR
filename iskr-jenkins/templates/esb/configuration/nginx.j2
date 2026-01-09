@@ -21,6 +21,21 @@ http {
     server {
         listen 80;
         server_name localhost;
+        
+        # Статика фронтенда из папки /var/www/site
+        location / {
+            root /var/www/site;
+            try_files $uri $uri/ /index.html;
+            
+            # Заголовки для кэширования статики
+            expires 1d;
+            add_header Cache-Control "public, max-age=86400";
+            
+            # Безопасность
+            add_header X-Content-Type-Options nosniff;
+            add_header X-Frame-Options DENY;
+            add_header X-XSS-Protection "1; mode=block";
+        }
 
         # Обработка статических изображений /images/имя_файла
         location ~ ^/images/(?<image_name>[^/]+)$ {
