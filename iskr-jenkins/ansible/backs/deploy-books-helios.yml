@@ -1,0 +1,40 @@
+---    
+  - name: Deploy books backend helios
+    hosts: deploy_back_books_helios
+    tasks: 
+      - name: Copy jar file
+        synchronize:
+          src: "/workspace/artifacts/backend_iskr-books.jar"
+          dest: "{{base_path}}/"
+          mode: push
+          use_ssh_args: yes
+        delegate_to: localhost
+
+      - name: Try to stop screen session
+        shell: "screen -X -S {{screen_session_name}} quit"
+        ignore_errors: true
+      
+      - name: Stop books backend 
+        shell: "kill $(ps | grep backend_iskr-books | grep -v grep | awk '{print $1}')"
+        ignore_errors: yes
+
+      - name: Start backend
+        shell: |
+          cd {{base_path}} && \
+          SERVICE_NAME={{service_name}} \
+          PG_USERNAME={{postgresql_admin_user}} \
+          PG_PASSWORD={{postgresql_admin_password}} \
+          PORT={{service_port}} \
+          CONSUL_HOST=155.212.168.176 \
+          CONSUL_PORT=8500 \
+          DISCOVERY_HOSTNAME=helios.cs.ifmo.ru \
+          CONSUL_KV_DEFAULT=apps \
+          screen -dmS {{screen_session_name}} java -jar backend_iskr-books.jar
+      
+      - name: Wait some time
+        ansible.builtin.pause:
+          seconds: "{{wait_from_startup}}"
+      
+      - name: Check if back alive
+        shell: "ps aux | grep backend_iskr-books | grep -v grep"
+        

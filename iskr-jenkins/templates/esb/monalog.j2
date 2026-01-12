@@ -1,0 +1,100 @@
+networks:
+  {{ network_name }}:
+    external: true
+    name: {{ network_name }}
+
+volumes:
+    prometheus_data: {}
+    grafana_data: {}
+
+services:
+  filebeat:
+    build:
+      context: ./monalog/filebeat
+      dockerfile: Dockerfile
+    hostname: filebeat
+    restart: unless-stopped
+    volumes:
+      - //var/lib/docker/containers:/usr/share/dockerlogs/data:ro
+      - //var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - {{ network_name }}
+  
+  cadvisor:
+    build:
+      context: ./monalog/cadvisor
+      dockerfile: Dockerfile
+    hostname: cadvisor
+    privileged: true
+    devices:
+      - //dev/kmsg:/dev/kmsg
+    volumes:
+      - //:/rootfs:ro
+      - //var/run:/var/run:ro
+      - //sys:/sys:ro
+      - //var/lib/docker:/var/lib/docker:ro
+      - //cgroup:/cgroup:ro 
+    restart: unless-stopped
+    networks:
+      - {{ network_name }}
+
+  nodeexporter:
+    image: prom/node-exporter:latest
+    hostname: node-exporter
+    volumes:
+      - //proc:/host/proc:ro
+      - //sys:/host/sys:ro
+      - //:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    restart: unless-stopped
+    networks:
+      - {{ network_name }}
+  
+  nginx-exporter:
+    image: nginx/nginx-prometheus-exporter:latest
+    hostname: nginx-exporter
+    restart: unless-stopped
+    command:
+      - '-nginx.scrape-uri=http://nginx:80/nginx_status'
+    networks:
+      - {{ network_name }}
+  
+  prometheus:
+    image: prom/prometheus:latest
+    hostname: prometheus
+    volumes:
+      - ./monalog/prometheus:/etc/prometheus
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    networks:
+      - {{ network_name }}
+  
+  grafana:
+    image: grafana/grafana:latest
+    hostname: grafana
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monalog/grafana/provisioning/:/etc/grafana/provisioning/
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+     # - GF_USERS_ALLOW_SIGN_UP=false
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    networks:
+      - {{ network_name }}
+

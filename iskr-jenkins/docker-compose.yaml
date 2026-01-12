@@ -12,6 +12,7 @@ services:
       - ./artifacts:/workspace/artifacts
       - ./deploy:/workspace/deploy
       - ./logs:/workspace/logs
+      - ./monalog:/workspace/monalog
       - //var/run/docker.sock:/var/run/docker.sock
       - ./jenkins:/var/jenkins_home
     ports:

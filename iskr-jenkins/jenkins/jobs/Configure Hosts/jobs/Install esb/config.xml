@@ -11,6 +11,7 @@
         <string>ANSIBLE_EXTRA_KEYS</string>
         <string>BUILD_FRONTEND</string>
         <string>INSTALL_ELASTICSEARCH</string>
+        <string>INSTALL_MONALOG</string>
         <string>INSTALL_CONSUL</string>
         <string>BUILD_INTEGRATION_BUS</string>
         <string>PROJECT_NAME</string>
@@ -83,6 +84,11 @@
           <description>Нужно ли установить nginx?</description>
           <defaultValue>false</defaultValue>
         </hudson.model.BooleanParameterDefinition>
+        <hudson.model.BooleanParameterDefinition>
+          <name>INSTALL_MONALOG</name>
+          <description>Нужно ли установить monalog?</description>
+          <defaultValue>false</defaultValue>
+        </hudson.model.BooleanParameterDefinition>
         <hudson.model.StringParameterDefinition>
           <name>ANSIBLE_EXTRA_KEYS</name>
           <description>Дополнительные ключи ansible</description>
@@ -138,6 +144,11 @@
             name: &quot;INSTALL_ELASTICSEARCH&quot;,
             defaultValue: false,
             description: &quot;Нужно ли установить nginx?&quot;
+        )
+		booleanParam(
+            name: &quot;INSTALL_MONALOG&quot;,
+            defaultValue: false,
+            description: &quot;Нужно ли установить monalog?&quot;
         )
         string(
             name: &quot;ANSIBLE_EXTRA_KEYS&quot;,
@@ -294,7 +305,22 @@
 				}
 			}
 		}
-		
+		stage(&quot;Install monalog&quot;) {
+			when {
+				expression { params.INSTALL_MONALOG }
+			}
+			steps {
+				script {
+					 withCredentials([string(credentialsId: &apos;ansible-vault-password&apos;, variable: &apos;VAULT_PASS&apos;)]) {
+					  sh &quot;&quot;&quot;
+						${env.PREPARE_CMD} &amp;&amp; \
+						${env.ANSIBLE_EXEC_PLAYBOOK} ${env.BASE_ANSIBLE_PARAMS} ./esb/deploy-monalog.yml \
+						${params.ANSIBLE_EXTRA_KEYS} --vault-password-file &lt;(echo &quot;$VAULT_PASS&quot;)
+						&quot;&quot;&quot;
+					 }
+				}
+			}
+		}
 		
 	}
 }</script>

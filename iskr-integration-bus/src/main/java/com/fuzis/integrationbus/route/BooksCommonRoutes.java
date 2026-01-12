@@ -1021,16 +1021,13 @@ public class BooksCommonRoutes extends RouteBuilder {
                 .setHeader("X-Service-Request", simple("api/v1/collections"))
                 .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
                 .process(exchange -> {
-                    // Получаем значения из заголовков
                     String title = exchange.getIn().getHeader("title", String.class);
                     String description = exchange.getIn().getHeader("description", String.class);
                     String confidentiality = exchange.getIn().getHeader("confidentiality", String.class);
                     String collectionType = exchange.getIn().getHeader("collectionType", String.class);
 
-                    // Создаем JSON объект
                     Map<String, String> jsonMap = new HashMap<>();
 
-                    // Проверяем и добавляем поля, если они не null
                     if (title != null) {
                         jsonMap.put("title", title);
                     }
@@ -1045,7 +1042,6 @@ public class BooksCommonRoutes extends RouteBuilder {
                     }
                     String jsonBody = objectMapper.writeValueAsString(jsonMap);
 
-                    // Устанавливаем результат
                     exchange.getIn().setBody(jsonBody);
                 })
                 .to("direct:sd-call-finalize");
